@@ -6,6 +6,10 @@
     body {
         font-family: 'Poppins', sans-serif;
     }
+
+    [x-cloak] {
+        display: none !important;
+    }
 }
 
 @layer components {
@@ -120,6 +124,663 @@
     .ids-login-button:hover {
         transform: translateY(-1px);
         filter: brightness(1.03);
+    }
+
+    .dashboard-header-shell {
+        position: relative;
+        overflow: visible;
+        border-radius: 0;
+        border: 1px solid rgba(204, 214, 224, 0.9);
+        background:
+            radial-gradient(circle at top right, rgba(31, 166, 194, 0.1), transparent 26%),
+            linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(248, 251, 252, 0.98));
+        box-shadow: 0 20px 48px rgba(15, 23, 42, 0.06);
+    }
+
+    .dashboard-header-shell::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0.32), transparent 18%, transparent 82%, rgba(34, 211, 238, 0.08));
+        pointer-events: none;
+    }
+
+    .dashboard-header-actions {
+        position: relative;
+        z-index: 1;
+    }
+
+    .app-shell,
+    .app-main-shell,
+    .app-main-view,
+    .app-main-content,
+    .app-main-header,
+    .app-mobile-header,
+    .app-sidebar,
+    .app-sidebar-card,
+    .app-user-card,
+    .app-logout-panel,
+    .app-logout-button,
+    .app-nav-link,
+    .dashboard-header-shell,
+    .dashboard-header-actions,
+    .dashboard-top-action,
+    .dashboard-notification-popover,
+    .dashboard-notification-item,
+    .dashboard-read-button {
+        transition:
+            background-color 220ms ease,
+            border-color 220ms ease,
+            color 220ms ease,
+            box-shadow 220ms ease;
+    }
+
+    .dashboard-top-action {
+        display: inline-flex;
+        height: 2.8rem;
+        width: 2.8rem;
+        align-items: center;
+        justify-content: center;
+        border-radius: 1rem;
+        border: 1px solid rgba(203, 213, 225, 0.9);
+        background: rgba(255, 255, 255, 0.92);
+        color: #0f172a;
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
+        transition: transform 180ms ease, background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+    }
+
+    .dashboard-top-action:hover {
+        transform: translateY(-1px);
+        background: #f8fafc;
+    }
+
+    .dashboard-notification-popover {
+        width: min(24rem, calc(100vw - 2rem));
+        border-radius: 1.75rem;
+        border: 1px solid rgba(203, 213, 225, 0.9);
+        background: rgba(255, 255, 255, 0.98);
+        box-shadow: 0 28px 70px rgba(15, 23, 42, 0.18);
+        backdrop-filter: blur(14px);
+    }
+
+    .dashboard-notification-item {
+        border-radius: 1.35rem;
+        border: 1px solid rgba(226, 232, 240, 0.95);
+        background: linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(255, 255, 255, 0.98));
+        transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease;
+    }
+
+    .dashboard-notification-item:hover {
+        transform: translateY(-1px);
+        border-color: rgba(148, 163, 184, 0.45);
+    }
+
+    .dashboard-unread-item {
+        border-color: rgba(254, 202, 202, 0.95);
+        background: linear-gradient(180deg, rgba(255, 241, 242, 0.96), rgba(255, 255, 255, 0.98));
+    }
+
+    .dashboard-read-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 9999px;
+        border: 1px solid rgba(248, 113, 113, 0.26);
+        background: rgba(239, 68, 68, 0.08);
+        padding: 0.45rem 0.8rem;
+        font-size: 0.67rem;
+        font-weight: 600;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: #dc2626;
+        transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+    }
+
+    .dashboard-read-button:hover {
+        border-color: rgba(220, 38, 38, 0.3);
+        background: rgba(239, 68, 68, 0.12);
+        color: #b91c1c;
+    }
+
+    .dashboard-pill-soft {
+        border-radius: 9999px;
+        border: 1px solid rgba(191, 219, 254, 0.65);
+        background: rgba(239, 246, 255, 0.92);
+        color: #0369a1;
+    }
+
+    .dashboard-panel {
+        transition: background-color 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
+    }
+
+    .tickets-hero,
+    .tickets-stat-card,
+    .tickets-filter-panel,
+    .tickets-queue-panel,
+    .tickets-ticket-card,
+    .ticket-create-panel,
+    .ticket-create-aside,
+    .ticket-show-hero,
+    .ticket-show-panel {
+        transition:
+            background-color 220ms ease,
+            border-color 220ms ease,
+            color 220ms ease,
+            box-shadow 220ms ease,
+            transform 220ms ease;
+    }
+
+    html.ids-dashboard-dark .dashboard-page-root.dashboard-body-shell {
+        border-radius: 2rem;
+        background:
+            radial-gradient(circle at top right, rgba(34, 211, 238, 0.12), transparent 24%),
+            linear-gradient(180deg, rgba(3, 12, 18, 0.84), rgba(3, 12, 18, 0.56));
+        padding: 1rem;
+    }
+
+    html.ids-dashboard-dark .dashboard-header-shell {
+        border-color: rgba(34, 56, 75, 0.95);
+        background:
+            radial-gradient(circle at top right, rgba(46, 204, 235, 0.14), transparent 28%),
+            linear-gradient(160deg, rgba(7, 21, 31, 0.96), rgba(11, 29, 40, 0.98));
+        box-shadow: 0 22px 58px rgba(1, 10, 16, 0.42);
+    }
+
+    html.ids-dashboard-dark .app-body {
+        background: #071520;
+        color: #e2e8f0;
+    }
+
+    html.ids-dashboard-dark .app-shell {
+        background:
+            radial-gradient(circle at top right, rgba(34, 211, 238, 0.1), transparent 22%),
+            linear-gradient(180deg, #071520 0%, #0b1d29 52%, #0f2733 100%);
+    }
+
+    html.ids-dashboard-dark .app-main-shell,
+    html.ids-dashboard-dark .app-main-view,
+    html.ids-dashboard-dark .app-main-content {
+        background: transparent;
+    }
+
+    html.ids-dashboard-dark .app-main-header {
+        border-color: rgba(34, 56, 75, 0.92);
+        background: rgba(7, 20, 29, 0.82);
+    }
+
+    html.ids-dashboard-dark .app-mobile-header {
+        border-color: rgba(34, 56, 75, 0.92);
+        background: rgba(7, 20, 29, 0.92);
+    }
+
+    html.ids-dashboard-dark .app-main-header .text-slate-950,
+    html.ids-dashboard-dark .app-main-header .text-slate-900,
+    html.ids-dashboard-dark .app-main-content .text-slate-950,
+    html.ids-dashboard-dark .app-main-content .text-slate-900 {
+        color: #f8fafc !important;
+    }
+
+    html.ids-dashboard-dark .app-main-header .text-slate-700,
+    html.ids-dashboard-dark .app-main-header .text-slate-600,
+    html.ids-dashboard-dark .app-main-header .text-slate-500,
+    html.ids-dashboard-dark .app-main-header .text-slate-400,
+    html.ids-dashboard-dark .app-main-content .text-slate-700,
+    html.ids-dashboard-dark .app-main-content .text-slate-600,
+    html.ids-dashboard-dark .app-main-content .text-slate-500,
+    html.ids-dashboard-dark .app-main-content .text-slate-400 {
+        color: rgba(203, 213, 225, 0.84) !important;
+    }
+
+    html.ids-dashboard-dark .app-main-content .bg-white,
+    html.ids-dashboard-dark .app-main-content .bg-slate-50,
+    html.ids-dashboard-dark .app-main-content .bg-slate-50\/60,
+    html.ids-dashboard-dark .app-main-content .bg-slate-50\/70,
+    html.ids-dashboard-dark .app-main-content .bg-slate-50\/80,
+    html.ids-dashboard-dark .app-main-content .bg-slate-100,
+    html.ids-dashboard-dark .app-main-content .bg-white\/80,
+    html.ids-dashboard-dark .app-main-content .via-white,
+    html.ids-dashboard-dark .app-main-content .from-white {
+        background-color: rgba(7, 20, 29, 0.94) !important;
+        background-image: none !important;
+    }
+
+    html.ids-dashboard-dark .app-main-header .bg-white,
+    html.ids-dashboard-dark .app-main-header .bg-slate-50,
+    html.ids-dashboard-dark .app-main-header .bg-slate-100 {
+        background-color: rgba(7, 20, 29, 0.88) !important;
+        background-image: none !important;
+    }
+
+    html.ids-dashboard-dark .app-main-content .border-slate-200,
+    html.ids-dashboard-dark .app-main-content .border-slate-300,
+    html.ids-dashboard-dark .app-main-content .border-blue-100,
+    html.ids-dashboard-dark .app-main-content .border-blue-200,
+    html.ids-dashboard-dark .app-main-content .border-cyan-100,
+    html.ids-dashboard-dark .app-main-content .border-cyan-200,
+    html.ids-dashboard-dark .app-main-content .border-emerald-200,
+    html.ids-dashboard-dark .app-main-content .border-rose-200,
+    html.ids-dashboard-dark .app-main-content .border-violet-100,
+    html.ids-dashboard-dark .app-main-content .border-violet-200,
+    html.ids-dashboard-dark .app-main-header .border-slate-200,
+    html.ids-dashboard-dark .app-main-header .border-slate-300 {
+        border-color: rgba(34, 56, 75, 0.92) !important;
+    }
+
+    html.ids-dashboard-dark .app-main-content .divide-slate-200 > *,
+    html.ids-dashboard-dark .app-main-content .ring-slate-100,
+    html.ids-dashboard-dark .app-main-content .ring-black\/5 {
+        border-color: rgba(34, 56, 75, 0.9) !important;
+        --tw-ring-color: rgba(34, 56, 75, 0.72) !important;
+    }
+
+    html.ids-dashboard-dark .app-main-content .shadow-sm,
+    html.ids-dashboard-dark .app-main-content .shadow-md,
+    html.ids-dashboard-dark .app-main-content .shadow-lg,
+    html.ids-dashboard-dark .app-main-content .shadow-xl {
+        box-shadow: 0 20px 45px rgba(1, 10, 16, 0.28) !important;
+    }
+
+    html.ids-dashboard-dark .app-main-content .hover\:bg-slate-50:hover,
+    html.ids-dashboard-dark .app-main-content .hover\:bg-slate-50\/60:hover,
+    html.ids-dashboard-dark .app-main-content .hover\:bg-slate-50\/70:hover,
+    html.ids-dashboard-dark .app-main-content .hover\:bg-slate-100:hover {
+        background: rgba(255, 255, 255, 0.06) !important;
+    }
+
+    html.ids-dashboard-dark .app-main-content .hover\:border-slate-300:hover,
+    html.ids-dashboard-dark .app-main-content .hover\:border-blue-200:hover {
+        border-color: rgba(71, 106, 131, 0.96) !important;
+    }
+
+    html.ids-dashboard-dark .app-main-content input,
+    html.ids-dashboard-dark .app-main-content textarea,
+    html.ids-dashboard-dark .app-main-content select {
+        border-color: rgba(34, 56, 75, 0.92) !important;
+        background: rgba(8, 22, 31, 0.88) !important;
+        color: #e2e8f0 !important;
+    }
+
+    html.ids-dashboard-dark .app-main-content input::placeholder,
+    html.ids-dashboard-dark .app-main-content textarea::placeholder {
+        color: rgba(148, 163, 184, 0.84) !important;
+    }
+
+    html.ids-dashboard-dark .app-main-content input:focus,
+    html.ids-dashboard-dark .app-main-content textarea:focus,
+    html.ids-dashboard-dark .app-main-content select:focus {
+        border-color: rgba(34, 211, 238, 0.72) !important;
+        --tw-ring-color: rgba(34, 211, 238, 0.18) !important;
+    }
+
+    html.ids-dashboard-dark .app-main-content option {
+        background: #0b1d29;
+        color: #e2e8f0;
+    }
+
+    html.ids-dashboard-dark .app-main-content .file\:bg-slate-900::file-selector-button,
+    html.ids-dashboard-dark .app-main-content .file\:bg-violet-700::file-selector-button {
+        box-shadow: none;
+        filter: brightness(1.05);
+    }
+
+    html.ids-dashboard-dark .app-main-content .bg-blue-50,
+    html.ids-dashboard-dark .app-main-content .bg-cyan-50,
+    html.ids-dashboard-dark .app-main-content .bg-emerald-50,
+    html.ids-dashboard-dark .app-main-content .bg-rose-50,
+    html.ids-dashboard-dark .app-main-content .bg-violet-50 {
+        background-color: rgba(255, 255, 255, 0.06) !important;
+    }
+
+    html.ids-dashboard-dark .app-main-content .text-blue-700,
+    html.ids-dashboard-dark .app-main-content .text-blue-600,
+    html.ids-dashboard-dark .app-main-content .text-cyan-700,
+    html.ids-dashboard-dark .app-main-content .text-cyan-600,
+    html.ids-dashboard-dark .app-main-content .text-emerald-700,
+    html.ids-dashboard-dark .app-main-content .text-violet-700 {
+        color: #67e8f9 !important;
+    }
+
+    html.ids-dashboard-dark .app-main-content .text-rose-800,
+    html.ids-dashboard-dark .app-main-content .text-rose-700,
+    html.ids-dashboard-dark .app-main-content .text-rose-600 {
+        color: #fda4af !important;
+    }
+
+    html.ids-dashboard-dark .app-main-content .bg-emerald-50 .text-emerald-800,
+    html.ids-dashboard-dark .app-main-content .bg-rose-50 .text-rose-800 {
+        color: inherit !important;
+    }
+
+    html.ids-dashboard-dark .app-sidebar {
+        border-color: rgba(49, 77, 97, 0.65);
+        background:
+            radial-gradient(circle at top, rgba(37, 99, 235, 0.14), transparent 32%),
+            linear-gradient(180deg, #071721 0%, #0b2d3b 45%, #114e61 100%);
+        box-shadow: 0 30px 80px rgba(1, 10, 16, 0.45);
+    }
+
+    html.ids-dashboard-dark .app-sidebar-card,
+    html.ids-dashboard-dark .app-logout-panel {
+        border-color: rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    html.ids-dashboard-dark .app-user-card {
+        border-color: rgba(255, 255, 255, 0.08);
+        background: rgba(2, 10, 16, 0.28);
+    }
+
+    html.ids-dashboard-dark .app-nav-link-active {
+        background: rgba(255, 255, 255, 0.96) !important;
+        color: #0f172a !important;
+        box-shadow: 0 16px 30px rgba(0, 0, 0, 0.18);
+    }
+
+    html.ids-dashboard-dark .app-nav-link-inactive {
+        color: rgba(236, 254, 255, 0.88) !important;
+    }
+
+    html.ids-dashboard-dark .app-nav-link-inactive:hover {
+        background: rgba(255, 255, 255, 0.08) !important;
+        color: #ffffff !important;
+    }
+
+    html.ids-dashboard-dark .app-logout-button {
+        background: rgba(2, 10, 16, 0.46);
+    }
+
+    html.ids-dashboard-dark .app-logout-button:hover {
+        background: rgba(2, 10, 16, 0.58) !important;
+    }
+
+    html.ids-dashboard-dark .dashboard-header-actions {
+        border-color: rgba(34, 56, 75, 0.92);
+        background: rgba(7, 20, 29, 0.72);
+        box-shadow: 0 14px 34px rgba(2, 9, 15, 0.26);
+    }
+
+    html.ids-dashboard-dark .dashboard-header-shell .text-slate-950,
+    html.ids-dashboard-dark .dashboard-panel .text-slate-950,
+    html.ids-dashboard-dark .dashboard-panel .text-slate-900 {
+        color: #f8fafc !important;
+    }
+
+    html.ids-dashboard-dark .dashboard-header-shell .text-slate-500,
+    html.ids-dashboard-dark .dashboard-panel .text-slate-700,
+    html.ids-dashboard-dark .dashboard-panel .text-slate-600,
+    html.ids-dashboard-dark .dashboard-panel .text-slate-500,
+    html.ids-dashboard-dark .dashboard-panel .text-slate-400 {
+        color: rgba(203, 213, 225, 0.84) !important;
+    }
+
+    html.ids-dashboard-dark .dashboard-top-action {
+        border-color: rgba(34, 56, 75, 0.92);
+        background: rgba(8, 22, 31, 0.88);
+        color: #e2e8f0;
+        box-shadow: 0 14px 32px rgba(2, 9, 15, 0.38);
+    }
+
+    html.ids-dashboard-dark .dashboard-top-action:hover {
+        background: rgba(14, 34, 46, 0.94);
+    }
+
+    html.ids-dashboard-dark .dashboard-notification-popover {
+        border-color: rgba(34, 56, 75, 0.92);
+        background: rgba(7, 20, 29, 0.98);
+        box-shadow: 0 30px 80px rgba(2, 9, 15, 0.52);
+    }
+
+    html.ids-dashboard-dark .dashboard-notification-popover .text-slate-950,
+    html.ids-dashboard-dark .dashboard-notification-popover .text-slate-900 {
+        color: #f8fafc !important;
+    }
+
+    html.ids-dashboard-dark .dashboard-notification-popover .text-slate-600,
+    html.ids-dashboard-dark .dashboard-notification-popover .text-slate-500,
+    html.ids-dashboard-dark .dashboard-notification-popover .text-slate-400 {
+        color: rgba(203, 213, 225, 0.82) !important;
+    }
+
+    html.ids-dashboard-dark .dashboard-notification-popover .border-slate-200,
+    html.ids-dashboard-dark .dashboard-notification-popover .border-dashed {
+        border-color: rgba(34, 56, 75, 0.9) !important;
+    }
+
+    html.ids-dashboard-dark .dashboard-notification-popover .bg-white,
+    html.ids-dashboard-dark .dashboard-notification-popover .bg-slate-50 {
+        background: rgba(255, 255, 255, 0.03) !important;
+    }
+
+    html.ids-dashboard-dark .dashboard-notification-item {
+        border-color: rgba(34, 56, 75, 0.88);
+        background: linear-gradient(180deg, rgba(9, 24, 34, 0.98), rgba(6, 17, 25, 0.98));
+    }
+
+    html.ids-dashboard-dark .dashboard-unread-item {
+        border-color: rgba(127, 29, 29, 0.72);
+        background: linear-gradient(180deg, rgba(49, 18, 22, 0.98), rgba(18, 8, 11, 0.98));
+    }
+
+    html.ids-dashboard-dark .dashboard-read-button {
+        border-color: rgba(248, 113, 113, 0.3);
+        background: rgba(127, 29, 29, 0.24);
+        color: #fecaca;
+    }
+
+    html.ids-dashboard-dark .dashboard-panel {
+        border-color: rgba(34, 56, 75, 0.92) !important;
+        background: linear-gradient(180deg, rgba(7, 20, 29, 0.98), rgba(5, 16, 24, 0.98)) !important;
+        box-shadow: 0 24px 60px rgba(2, 9, 15, 0.26);
+    }
+
+    html.ids-dashboard-dark .dashboard-panel .border-slate-200,
+    html.ids-dashboard-dark .dashboard-panel .divide-slate-200 > *,
+    html.ids-dashboard-dark .dashboard-panel.border-slate-200 {
+        border-color: rgba(34, 56, 75, 0.9) !important;
+    }
+
+    html.ids-dashboard-dark .dashboard-panel .bg-white,
+    html.ids-dashboard-dark .dashboard-panel .bg-slate-50,
+    html.ids-dashboard-dark .dashboard-panel .bg-slate-100,
+    html.ids-dashboard-dark .dashboard-panel .bg-cyan-50\/70 {
+        background: rgba(255, 255, 255, 0.04) !important;
+    }
+
+    html.ids-dashboard-dark .dashboard-panel .hover\:bg-slate-50\/60:hover,
+    html.ids-dashboard-dark .dashboard-panel .hover\:bg-slate-50\/70:hover,
+    html.ids-dashboard-dark .dashboard-panel .hover\:bg-slate-100:hover {
+        background: rgba(255, 255, 255, 0.06) !important;
+    }
+
+    html.ids-dashboard-dark .dashboard-pill-soft {
+        border-color: rgba(34, 211, 238, 0.22);
+        background: rgba(34, 211, 238, 0.12);
+        color: #67e8f9;
+    }
+
+    html.ids-dashboard-dark .tickets-hero {
+        border-color: rgba(34, 56, 75, 0.92) !important;
+        background:
+            radial-gradient(circle at top right, rgba(34, 211, 238, 0.12), transparent 30%),
+            linear-gradient(135deg, rgba(7, 20, 29, 0.98), rgba(10, 31, 43, 0.98)) !important;
+        box-shadow: 0 24px 60px rgba(2, 9, 15, 0.28);
+    }
+
+    html.ids-dashboard-dark .tickets-hero .bg-blue-300\/20 {
+        background-color: rgba(34, 211, 238, 0.1) !important;
+    }
+
+    html.ids-dashboard-dark .tickets-hero .text-slate-950 {
+        color: #f8fafc !important;
+    }
+
+    html.ids-dashboard-dark .tickets-hero .text-slate-600 {
+        color: rgba(203, 213, 225, 0.84) !important;
+    }
+
+    html.ids-dashboard-dark .tickets-page .tickets-stat-card,
+    html.ids-dashboard-dark .tickets-page .tickets-filter-panel,
+    html.ids-dashboard-dark .tickets-page .tickets-queue-panel,
+    html.ids-dashboard-dark .tickets-page .tickets-ticket-card {
+        border-color: rgba(34, 56, 75, 0.92) !important;
+        background: linear-gradient(180deg, rgba(7, 20, 29, 0.98), rgba(5, 16, 24, 0.98)) !important;
+        box-shadow: 0 24px 60px rgba(2, 9, 15, 0.26);
+    }
+
+    html.ids-dashboard-dark .tickets-page .tickets-ticket-card:hover,
+    html.ids-dashboard-dark .tickets-page .tickets-stat-card:hover {
+        border-color: rgba(71, 106, 131, 0.96) !important;
+        background: linear-gradient(180deg, rgba(10, 25, 35, 0.98), rgba(6, 18, 27, 0.98)) !important;
+    }
+
+    html.ids-dashboard-dark .tickets-page .bg-slate-50\/60,
+    html.ids-dashboard-dark .tickets-page .bg-slate-50,
+    html.ids-dashboard-dark .tickets-page .bg-slate-100,
+    html.ids-dashboard-dark .ticket-show-page .bg-slate-50,
+    html.ids-dashboard-dark .ticket-show-page .bg-slate-100,
+    html.ids-dashboard-dark .ticket-create-page .bg-slate-50\/80 {
+        background: rgba(255, 255, 255, 0.04) !important;
+        background-image: none !important;
+    }
+
+    html.ids-dashboard-dark .tickets-page .bg-blue-50,
+    html.ids-dashboard-dark .tickets-page .bg-emerald-50,
+    html.ids-dashboard-dark .tickets-page .bg-violet-50,
+    html.ids-dashboard-dark .ticket-show-page .bg-blue-50,
+    html.ids-dashboard-dark .ticket-show-page .bg-violet-50,
+    html.ids-dashboard-dark .ticket-create-page .bg-cyan-50 {
+        background-color: rgba(255, 255, 255, 0.06) !important;
+    }
+
+    html.ids-dashboard-dark .tickets-page .text-slate-950,
+    html.ids-dashboard-dark .tickets-page .text-slate-900,
+    html.ids-dashboard-dark .ticket-show-page .text-slate-950,
+    html.ids-dashboard-dark .ticket-show-page .text-slate-900,
+    html.ids-dashboard-dark .ticket-create-page .text-slate-950,
+    html.ids-dashboard-dark .ticket-create-page .text-slate-900 {
+        color: #f8fafc !important;
+    }
+
+    html.ids-dashboard-dark .tickets-page .text-slate-700,
+    html.ids-dashboard-dark .tickets-page .text-slate-600,
+    html.ids-dashboard-dark .tickets-page .text-slate-500,
+    html.ids-dashboard-dark .tickets-page .text-slate-400,
+    html.ids-dashboard-dark .ticket-show-page .text-slate-700,
+    html.ids-dashboard-dark .ticket-show-page .text-slate-600,
+    html.ids-dashboard-dark .ticket-show-page .text-slate-500,
+    html.ids-dashboard-dark .ticket-show-page .text-slate-400,
+    html.ids-dashboard-dark .ticket-create-page .text-slate-700,
+    html.ids-dashboard-dark .ticket-create-page .text-slate-600,
+    html.ids-dashboard-dark .ticket-create-page .text-slate-500,
+    html.ids-dashboard-dark .ticket-create-page .text-slate-400 {
+        color: rgba(203, 213, 225, 0.84) !important;
+    }
+
+    html.ids-dashboard-dark .tickets-page .border-slate-200,
+    html.ids-dashboard-dark .tickets-page .border-slate-300,
+    html.ids-dashboard-dark .tickets-page .border-blue-100,
+    html.ids-dashboard-dark .tickets-page .border-blue-200,
+    html.ids-dashboard-dark .tickets-page .border-emerald-200,
+    html.ids-dashboard-dark .tickets-page .border-violet-100,
+    html.ids-dashboard-dark .ticket-show-page .border-slate-200,
+    html.ids-dashboard-dark .ticket-show-page .border-slate-300,
+    html.ids-dashboard-dark .ticket-show-page .border-blue-100,
+    html.ids-dashboard-dark .ticket-show-page .border-violet-100,
+    html.ids-dashboard-dark .ticket-create-page .border-slate-200,
+    html.ids-dashboard-dark .ticket-create-page .border-slate-300,
+    html.ids-dashboard-dark .ticket-create-page .border-cyan-50 {
+        border-color: rgba(34, 56, 75, 0.92) !important;
+    }
+
+    html.ids-dashboard-dark .tickets-page .divide-slate-200 > *,
+    html.ids-dashboard-dark .ticket-show-page .divide-slate-200 > * {
+        border-color: rgba(34, 56, 75, 0.92) !important;
+    }
+
+    html.ids-dashboard-dark .tickets-page input,
+    html.ids-dashboard-dark .tickets-page textarea,
+    html.ids-dashboard-dark .tickets-page select,
+    html.ids-dashboard-dark .ticket-show-page input,
+    html.ids-dashboard-dark .ticket-show-page textarea,
+    html.ids-dashboard-dark .ticket-show-page select,
+    html.ids-dashboard-dark .ticket-create-page input,
+    html.ids-dashboard-dark .ticket-create-page textarea,
+    html.ids-dashboard-dark .ticket-create-page select {
+        border-color: rgba(34, 56, 75, 0.92) !important;
+        background: rgba(8, 22, 31, 0.88) !important;
+        color: #e2e8f0 !important;
+    }
+
+    html.ids-dashboard-dark .tickets-page input::placeholder,
+    html.ids-dashboard-dark .tickets-page textarea::placeholder,
+    html.ids-dashboard-dark .ticket-show-page input::placeholder,
+    html.ids-dashboard-dark .ticket-show-page textarea::placeholder,
+    html.ids-dashboard-dark .ticket-create-page input::placeholder,
+    html.ids-dashboard-dark .ticket-create-page textarea::placeholder {
+        color: rgba(148, 163, 184, 0.84) !important;
+    }
+
+    html.ids-dashboard-dark .tickets-page input:focus,
+    html.ids-dashboard-dark .tickets-page textarea:focus,
+    html.ids-dashboard-dark .tickets-page select:focus,
+    html.ids-dashboard-dark .ticket-show-page input:focus,
+    html.ids-dashboard-dark .ticket-show-page textarea:focus,
+    html.ids-dashboard-dark .ticket-show-page select:focus,
+    html.ids-dashboard-dark .ticket-create-page input:focus,
+    html.ids-dashboard-dark .ticket-create-page textarea:focus,
+    html.ids-dashboard-dark .ticket-create-page select:focus {
+        border-color: rgba(34, 211, 238, 0.72) !important;
+        --tw-ring-color: rgba(34, 211, 238, 0.18) !important;
+    }
+
+    html.ids-dashboard-dark .tickets-page option,
+    html.ids-dashboard-dark .ticket-show-page option,
+    html.ids-dashboard-dark .ticket-create-page option {
+        background: #0b1d29;
+        color: #e2e8f0;
+    }
+
+    html.ids-dashboard-dark .ticket-create-panel,
+    html.ids-dashboard-dark .ticket-show-panel {
+        border-color: rgba(34, 56, 75, 0.92) !important;
+        background: linear-gradient(180deg, rgba(7, 20, 29, 0.98), rgba(5, 16, 24, 0.98)) !important;
+        box-shadow: 0 24px 60px rgba(2, 9, 15, 0.26);
+    }
+
+    html.ids-dashboard-dark .ticket-create-aside {
+        background:
+            radial-gradient(circle at top right, rgba(34, 211, 238, 0.14), transparent 28%),
+            linear-gradient(135deg, rgba(10, 59, 72, 0.98), rgba(10, 128, 151, 0.94)) !important;
+        box-shadow: 0 24px 60px rgba(2, 9, 15, 0.32);
+    }
+
+    html.ids-dashboard-dark .ticket-show-hero {
+        border-color: rgba(34, 56, 75, 0.92) !important;
+        background: linear-gradient(180deg, rgba(7, 20, 29, 0.98), rgba(5, 16, 24, 0.98)) !important;
+        box-shadow: 0 24px 60px rgba(2, 9, 15, 0.26);
+    }
+
+    html.ids-dashboard-dark .ticket-show-hero .bg-gradient-to-br,
+    html.ids-dashboard-dark .ticket-show-hero .bg-blue-300\/20 {
+        opacity: 0.18;
+    }
+
+    html.ids-dashboard-dark .ticket-show-page .bg-white,
+    html.ids-dashboard-dark .ticket-show-page .hover\:bg-slate-50:hover,
+    html.ids-dashboard-dark .ticket-show-page .hover\:bg-slate-100:hover,
+    html.ids-dashboard-dark .ticket-show-page .focus\:bg-white:focus,
+    html.ids-dashboard-dark .ticket-create-page .bg-white,
+    html.ids-dashboard-dark .ticket-create-page .hover\:bg-slate-50:hover,
+    html.ids-dashboard-dark .ticket-create-page .hover\:file\:bg-slate-800:hover::file-selector-button,
+    html.ids-dashboard-dark .ticket-create-page .focus\:bg-white:focus {
+        background-color: rgba(7, 20, 29, 0.94) !important;
+        background-image: none !important;
+    }
+
+    html.ids-dashboard-dark .ticket-show-page .ring-black\/5,
+    html.ids-dashboard-dark .ticket-show-page .ring-slate-100 {
+        --tw-ring-color: rgba(34, 56, 75, 0.78) !important;
     }
 }
 

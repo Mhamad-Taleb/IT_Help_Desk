@@ -3,6 +3,8 @@
 use App\Http\Controllers\Admin\CategoryManagementController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\HistoryController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TicketController;
 use Illuminate\Support\Facades\Route;
@@ -15,6 +17,10 @@ Route::get('/', function () {
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
+    Route::get('/history', HistoryController::class)->name('history');
+    Route::patch('/notifications/{auditLog}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+    Route::patch('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
+    Route::patch('/notifications/clear-all', [NotificationController::class, 'clearAll'])->name('notifications.clear-all');
     Route::get('/tickets', [TicketController::class, 'index'])->name('tickets.index');
 
     Route::middleware('role:employee')->group(function () {
@@ -24,6 +30,9 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/tickets/{ticket}', [TicketController::class, 'show'])->name('tickets.show');
     Route::post('/tickets/{ticket}/messages', [TicketController::class, 'storeMessage'])->name('tickets.messages.store');
+    Route::post('/tickets/{ticket}/attachments', [TicketController::class, 'storeAttachment'])->name('tickets.attachments.store');
+    Route::get('/ticket-attachments/{attachment}', [TicketController::class, 'downloadAttachment'])->name('tickets.attachments.download');
+    Route::get('/ticket-attachments/{attachment}/open', [TicketController::class, 'openAttachment'])->name('tickets.attachments.open');
     Route::patch('/tickets/{ticket}', [TicketController::class, 'update'])->name('tickets.update');
     Route::delete('/tickets/{ticket}', [TicketController::class, 'destroy'])->name('tickets.destroy');
 

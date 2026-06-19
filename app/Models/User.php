@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -82,6 +83,23 @@ class User extends Authenticatable
     public function ticketMessages(): HasMany
     {
         return $this->hasMany(TicketMessage::class);
+    }
+
+    public function ticketAttachments(): HasMany
+    {
+        return $this->hasMany(TicketAttachment::class);
+    }
+
+    public function auditLogs(): HasMany
+    {
+        return $this->hasMany(AuditLog::class);
+    }
+
+    public function readAuditLogs(): BelongsToMany
+    {
+        return $this->belongsToMany(AuditLog::class, 'audit_log_reads')
+            ->withPivot('read_at')
+            ->withTimestamps();
     }
 
     public function scopeByRole(Builder $query, UserRole|string $role): Builder

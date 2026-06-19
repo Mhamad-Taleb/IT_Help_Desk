@@ -7,9 +7,12 @@ use App\Enums\TicketStatus;
 use App\Enums\UserRole;
 use App\Models\Category;
 use App\Models\Ticket;
+use App\Models\TicketAttachment;
 use App\Models\TicketMessage;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class TicketManagementTest extends TestCase
@@ -114,7 +117,7 @@ class TicketManagementTest extends TestCase
         ]);
 
         $ticket = Ticket::factory()->create([
-            'assigned_to' => null,
+            'assigned_to' => $agent->id,
             'status' => TicketStatus::Open,
         ]);
 
@@ -136,6 +139,50 @@ class TicketManagementTest extends TestCase
         ]);
     }
 
+    public function test_support_agent_can_view_unassigned_ticket(): void
+    {
+        $agent = User::factory()->create([
+            'role' => UserRole::SupportAgent,
+        ]);
+
+        $ticket = Ticket::factory()->create([
+            'assigned_to' => null,
+        ]);
+
+        $response = $this->actingAs($agent)->get(route('tickets.show', $ticket));
+
+        $response->assertOk();
+    }
+
+    public function test_support_agent_can_take_ownership_of_unassigned_ticket(): void
+    {
+        $agent = User::factory()->create([
+            'role' => UserRole::SupportAgent,
+        ]);
+
+        $ticket = Ticket::factory()->create([
+            'assigned_to' => null,
+            'status' => TicketStatus::Open,
+        ]);
+
+        $response = $this->actingAs($agent)->patch(route('tickets.update', $ticket), [
+            'title' => $ticket->title,
+            'description' => $ticket->description,
+            'category_id' => $ticket->category_id,
+            'priority' => $ticket->priority->value,
+            'status' => TicketStatus::InProgress->value,
+            'assigned_to' => $agent->id,
+        ]);
+
+        $response->assertRedirect();
+
+        $this->assertDatabaseHas('tickets', [
+            'id' => $ticket->id,
+            'assigned_to' => $agent->id,
+            'status' => TicketStatus::InProgress->value,
+        ]);
+    }
+
     public function test_comments_are_deleted_when_ticket_is_resolved(): void
     {
         $agent = User::factory()->create([
@@ -144,6 +191,7 @@ class TicketManagementTest extends TestCase
 
         $ticket = Ticket::factory()->create([
             'status' => TicketStatus::InProgress,
+            'assigned_to' => $agent->id,
         ]);
 
         $comment = TicketMessage::factory()->create([
@@ -174,6 +222,7 @@ class TicketManagementTest extends TestCase
 
         $ticket = Ticket::factory()->create([
             'status' => TicketStatus::Resolved,
+            'assigned_to' => $agent->id,
         ]);
 
         $comment = TicketMessage::factory()->create([
@@ -220,13 +269,167 @@ class TicketManagementTest extends TestCase
         ]);
     }
 
+    public function test_employee_can_add_a_comment_with_async_submission(): void
+    {
+        $employee = User::factory()->create([
+            'role' => UserRole::Employee,
+        ]);
+
+        $ticket = Ticket::factory()->create([
+            'created_by' => $employee->id,
+        ]);
+
+        $response = $this->actingAs($employee)->post(
+            route('tickets.messages.store', $ticket),
+            [
+                'body' => 'This is an async popup comment.',
+            ],
+            [
+                'Accept' => 'application/json',
+                'X-Requested-With' => 'XMLHttpRequest',
+            ]
+        );
+
+        $response->assertOk();
+        $response->assertJson([
+            'message' => 'Comment added successfully.',
+        ]);
+        $response->assertJsonPath('comment.body', 'This is an async popup comment.');
+
+        $this->assertDatabaseHas('ticket_messages', [
+            'ticket_id' => $ticket->id,
+            'user_id' => $employee->id,
+            'body' => 'This is an async popup comment.',
+        ]);
+    }
+
+    public function test_employee_can_upload_an_allowed_file_to_their_ticket(): void
+    {
+        Storage::fake('local');
+
+        $employee = User::factory()->create([
+            'role' => UserRole::Employee,
+        ]);
+
+        $ticket = Ticket::factory()->create([
+            'created_by' => $employee->id,
+        ]);
+
+        $response = $this->actingAs($employee)->post(route('tickets.attachments.store', $ticket), [
+            'attachments' => [
+                UploadedFile::fake()->create('network-report.pdf', 200, 'application/pdf'),
+            ],
+        ]);
+
+        $response->assertRedirect(route('tickets.show', $ticket));
+
+        $attachment = TicketAttachment::query()->first();
+
+        $this->assertNotNull($attachment);
+        Storage::disk('local')->assertExists($attachment->storage_path);
+        $this->assertDatabaseHas('ticket_attachments', [
+            'ticket_id' => $ticket->id,
+            'user_id' => $employee->id,
+            'original_name' => 'network-report.pdf',
+            'extension' => 'pdf',
+        ]);
+    }
+
+    public function test_executable_file_upload_is_blocked_with_friendly_message(): void
+    {
+        Storage::fake('local');
+
+        $employee = User::factory()->create([
+            'role' => UserRole::Employee,
+        ]);
+
+        $ticket = Ticket::factory()->create([
+            'created_by' => $employee->id,
+        ]);
+
+        $response = $this->actingAs($employee)->from(route('tickets.show', $ticket))->post(route('tickets.attachments.store', $ticket), [
+            'attachments' => [
+                UploadedFile::fake()->create('installer.exe', 80, 'application/octet-stream'),
+            ],
+        ]);
+
+        $response->assertRedirect(route('tickets.show', $ticket));
+        $response->assertSessionHasErrors('attachments.0');
+        $response->assertSessionHasErrors([
+            'attachments.0' => 'Only PDF, TXT, DOCX, JPG, JPEG, and PNG files are allowed.',
+        ]);
+
+        $this->assertDatabaseCount('ticket_attachments', 0);
+    }
+
+    public function test_attachment_upload_validation_returns_json_for_async_popup_submission(): void
+    {
+        Storage::fake('local');
+
+        $employee = User::factory()->create([
+            'role' => UserRole::Employee,
+        ]);
+
+        $ticket = Ticket::factory()->create([
+            'created_by' => $employee->id,
+        ]);
+
+        $response = $this->actingAs($employee)->post(
+            route('tickets.attachments.store', $ticket),
+            [],
+            [
+                'Accept' => 'application/json',
+                'X-Requested-With' => 'XMLHttpRequest',
+            ]
+        );
+
+        $response->assertStatus(422);
+        $response->assertJson([
+            'message' => 'Please choose at least one file to upload.',
+        ]);
+    }
+
+    public function test_authorized_user_can_open_ticket_attachment_inline(): void
+    {
+        Storage::fake('local');
+
+        $employee = User::factory()->create([
+            'role' => UserRole::Employee,
+        ]);
+
+        $ticket = Ticket::factory()->create([
+            'created_by' => $employee->id,
+        ]);
+
+        $storedFile = UploadedFile::fake()->create('reference.pdf', 120, 'application/pdf');
+        $storedPath = $storedFile->store("ticket-attachments/{$ticket->id}", 'local');
+
+        $attachment = TicketAttachment::query()->create([
+            'ticket_id' => $ticket->id,
+            'user_id' => $employee->id,
+            'original_name' => 'reference.pdf',
+            'storage_path' => $storedPath,
+            'mime_type' => 'application/pdf',
+            'extension' => 'pdf',
+            'file_size' => $storedFile->getSize(),
+        ]);
+
+        $response = $this->actingAs($employee)->get(route('tickets.attachments.open', $attachment));
+
+        $response->assertOk();
+        $response->assertHeader('content-type', 'application/pdf');
+        $response->assertHeader('content-disposition', 'inline; filename="reference.pdf"');
+    }
+
     public function test_support_agent_can_add_a_comment_to_the_ticket(): void
     {
         $agent = User::factory()->create([
             'role' => UserRole::SupportAgent,
         ]);
 
-        $ticket = Ticket::factory()->create();
+        $ticket = Ticket::factory()->create([
+            'assigned_to' => $agent->id,
+        ]);
 
         $response = $this->actingAs($agent)->post(route('tickets.messages.store', $ticket), [
             'body' => 'The issue has been checked and I am working on a fix.',
@@ -254,6 +457,7 @@ class TicketManagementTest extends TestCase
 
         $ticket = Ticket::factory()->create([
             'created_by' => $employee->id,
+            'assigned_to' => $agent->id,
         ]);
 
         TicketMessage::factory()->create([
@@ -266,7 +470,7 @@ class TicketManagementTest extends TestCase
         $response = $this->actingAs($employee)->get(route('tickets.show', $ticket));
 
         $response->assertOk();
-        $response->assertSeeText('I have started troubleshooting and will update you soon.');
+        $response->assertSee('I have started troubleshooting and will update you soon.', false);
     }
 
     public function test_support_agent_can_see_employee_comment_on_the_ticket_screen(): void
@@ -281,6 +485,7 @@ class TicketManagementTest extends TestCase
 
         $ticket = Ticket::factory()->create([
             'created_by' => $employee->id,
+            'assigned_to' => $agent->id,
         ]);
 
         TicketMessage::factory()->create([
@@ -293,7 +498,7 @@ class TicketManagementTest extends TestCase
         $response = $this->actingAs($agent)->get(route('tickets.show', $ticket));
 
         $response->assertOk();
-        $response->assertSeeText('Here is more information about the issue after testing.');
+        $response->assertSee('Here is more information about the issue after testing.', false);
     }
 
     public function test_employee_can_not_update_another_users_ticket(): void

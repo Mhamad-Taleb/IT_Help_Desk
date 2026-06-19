@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="overflow-hidden rounded-[1.8rem] border border-blue-100 bg-gradient-to-br from-white via-blue-50 to-sky-100 shadow-md">
+        <div class="tickets-hero overflow-hidden rounded-[1.8rem] border border-blue-100 bg-gradient-to-br from-white via-blue-50 to-sky-100 shadow-md">
             <div class="relative px-8 py-6">
                 <div class="absolute -right-20 -top-20 h-60 w-60 rounded-full bg-blue-300/20 blur-3xl"></div>
 
@@ -34,7 +34,7 @@
         </div>
     </x-slot>
 
-    <div class="space-y-8">
+    <div class="tickets-page space-y-8">
 
         @if (session('status'))
             <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-semibold text-emerald-800 shadow-sm">
@@ -48,9 +48,9 @@
             </div>
         @endif
 
-        {{-- Stats --}}
+        {{-- Stats 
         <section class="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-            <div class="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
+            <div class="tickets-stat-card rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
                 <div class="flex items-center justify-between">
                     <p class="text-xs font-bold uppercase tracking-[0.25em] text-slate-500">All Visible</p>
                     <span class="rounded-2xl bg-blue-50 px-3 py-2 text-sm">📋</span>
@@ -59,7 +59,7 @@
                 <p class="mt-1 text-sm text-slate-500">Total tickets available</p>
             </div>
 
-            <div class="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
+            <div class="tickets-stat-card rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
                 <div class="flex items-center justify-between">
                     <p class="text-xs font-bold uppercase tracking-[0.25em] text-slate-500">Open</p>
                     <span class="rounded-2xl bg-blue-50 px-3 py-2 text-sm">🔵</span>
@@ -68,7 +68,7 @@
                 <p class="mt-1 text-sm text-slate-500">Waiting for action</p>
             </div>
 
-            <div class="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
+            <div class="tickets-stat-card rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
                 <div class="flex items-center justify-between">
                     <p class="text-xs font-bold uppercase tracking-[0.25em] text-slate-500">Resolved</p>
                     <span class="rounded-2xl bg-emerald-50 px-3 py-2 text-sm">✅</span>
@@ -77,7 +77,7 @@
                 <p class="mt-1 text-sm text-slate-500">Completed cases</p>
             </div>
 
-            <div class="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
+            <div class="tickets-stat-card rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
                 <div class="flex items-center justify-between">
                     <p class="text-xs font-bold uppercase tracking-[0.25em] text-slate-500">Assigned</p>
                     <span class="rounded-2xl bg-violet-50 px-3 py-2 text-sm">👤</span>
@@ -85,10 +85,10 @@
                 <p class="mt-5 text-4xl font-bold text-slate-950">{{ $assignedTickets }}</p>
                 <p class="mt-1 text-sm text-slate-500">Handled by employees</p>
             </div>
-        </section>
+        </section>--}}
 
         {{-- Filters --}}
-        <section class="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-lg">
+        <section class="tickets-filter-panel rounded-[2rem] border border-slate-200 bg-white p-8 shadow-lg">
             <form method="GET" action="{{ route('tickets.index') }}">
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div class="flex items-center gap-4">
@@ -193,7 +193,7 @@
         </section>
 
         {{-- Ticket Queue --}}
-        <section class="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
+        <section class="tickets-queue-panel overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
             <div class="flex flex-col gap-3 border-b border-slate-200 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h3 class="text-xl font-bold text-slate-950">Ticket Queue</h3>
@@ -214,7 +214,7 @@
 
             <div class="space-y-4 bg-slate-50/60 p-6">
                 @forelse ($tickets as $ticket)
-                    <article class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition duration-200 hover:border-blue-200 hover:shadow-md">
+                    <article class="tickets-ticket-card rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition duration-200 hover:border-blue-200 hover:shadow-md">
                         <div class="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
 
                             {{-- Main Ticket Info --}}

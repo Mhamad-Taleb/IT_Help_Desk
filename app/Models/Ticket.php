@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\TicketPriority;
 use App\Enums\TicketStatus;
+use App\Enums\UserRole;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -75,12 +76,21 @@ class Ticket extends Model
         return $this->hasMany(TicketMessage::class)->latest();
     }
 
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(TicketAttachment::class)->latest();
+    }
+
     public function scopeVisibleTo(Builder $query, User $user): Builder
     {
-        if ($user->hasRole(\App\Enums\UserRole::Employee)) {
-            return $query->where('created_by', $user->id);
-        }
-
-        return $query;
+        return match ($user->role) {
+            UserRole::Admin, UserRole::Manager => $query,
+            UserRole::SupportAgent => $query->where(function (Builder $nestedQuery) use ($user): void {
+                $nestedQuery
+                    ->where('assigned_to', $user->id)
+                    ->orWhereNull('assigned_to');
+            }),
+            UserRole::Employee => $query->where('created_by', $user->id),
+        };
     }
 }

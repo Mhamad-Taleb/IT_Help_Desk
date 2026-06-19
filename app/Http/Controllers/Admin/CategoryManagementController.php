@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Support\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -28,7 +29,14 @@ class CategoryManagementController extends Controller
     {
         $validated = $request->validate($this->rules());
 
-        Category::create($validated);
+        $category = Category::create($validated);
+
+        AuditLogger::record(
+            'category.created',
+            auth()->user()->name." created category {$category->name}.",
+            actor: auth()->user(),
+            subject: $category,
+        );
 
         return redirect()
             ->route('admin.categories.index')
@@ -40,6 +48,13 @@ class CategoryManagementController extends Controller
         $validated = $request->validate($this->rules($category));
 
         $category->update($validated);
+
+        AuditLogger::record(
+            'category.updated',
+            auth()->user()->name." updated category {$category->name}.",
+            actor: auth()->user(),
+            subject: $category,
+        );
 
         return redirect()
             ->route('admin.categories.index')
@@ -54,7 +69,15 @@ class CategoryManagementController extends Controller
                 ->withErrors('This category already has tickets and cannot be deleted.');
         }
 
+        $deletedCategoryName = $category->name;
         $category->delete();
+
+        AuditLogger::record(
+            'category.deleted',
+            auth()->user()->name." deleted category {$deletedCategoryName}.",
+            actor: auth()->user(),
+            properties: ['deleted_category_name' => $deletedCategoryName],
+        );
 
         return redirect()
             ->route('admin.categories.index')

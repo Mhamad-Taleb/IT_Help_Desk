@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rules\Password;
@@ -41,6 +42,14 @@ class UserManagementController extends Controller
             'email_verified_at' => now(),
         ]);
 
+        AuditLogger::record(
+            'user.created',
+            auth()->user()->name." created user {$user->name}.",
+            actor: auth()->user(),
+            subject: $user,
+            targetUser: $user,
+        );
+
         return back()->with('status', "{$user->name} was created successfully.");
     }
 
@@ -70,6 +79,14 @@ class UserManagementController extends Controller
             'role' => $newRole,
         ]);
 
+        AuditLogger::record(
+            'user.updated',
+            auth()->user()->name." updated user {$user->name}.",
+            actor: auth()->user(),
+            subject: $user,
+            targetUser: $user,
+        );
+
         return back()->with('status', "{$user->name} was updated successfully.");
     }
 
@@ -94,8 +111,17 @@ class UserManagementController extends Controller
         }
 
         $deletedName = $user->name;
+        $deletedUserId = $user->id;
 
         $user->delete();
+
+        AuditLogger::record(
+            'user.deleted',
+            auth()->user()->name." deleted user {$deletedName}.",
+            actor: auth()->user(),
+            targetUser: null,
+            properties: ['deleted_user_id' => $deletedUserId, 'deleted_user_name' => $deletedName],
+        );
 
         return back()->with('status', "{$deletedName} was deleted successfully.");
     }

@@ -7,15 +7,25 @@ use App\Enums\TicketStatus;
 use App\Enums\UserRole;
 use App\Models\Category;
 use App\Models\Ticket;
+use App\Models\TicketAttachment;
 use App\Models\TicketMessage;
 use App\Models\User;
+use App\Support\AuditLogger;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
 class TicketController extends Controller
 {
+    protected const ALLOWED_ATTACHMENT_EXTENSIONS = [
+        'pdf', 'txt', 'docx', 'jpg', 'jpeg', 'png',
+    ];
+
     public function index(Request $request): View
     {
         $user = $request->user();
@@ -59,6 +69,7 @@ class TicketController extends Controller
     public function create(Request $request): View
     {
         return view('tickets.create', [
+            'allowedAttachmentText' => $this->allowedAttachmentText(),
             'assignees' => $this->assignableUsers(),
             'categories' => Category::query()->active()->ordered()->get(),
             'priorities' => TicketPriority::cases(),
@@ -69,7 +80,10 @@ class TicketController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $user = $request->user();
-        $validated = $request->validate($this->rulesFor($user));
+        $validated = $request->validate(
+            array_merge($this->rulesFor($user), $this->attachmentRules()),
+            $this->attachmentMessages(),
+        );
 
         $ticket = Ticket::create([
             'title' => $validated['title'],
@@ -81,6 +95,18 @@ class TicketController extends Controller
             'assigned_to' => $this->canManageWorkflow($user) ? ($validated['assigned_to'] ?? null) : null,
         ]);
 
+        AuditLogger::record(
+            'ticket.created',
+            "{$user->name} created ticket {$ticket->ticket_number}.",
+            actor: $user,
+            subject: $ticket,
+            ticket: $ticket,
+        );
+
+        if ($request->hasFile('attachments')) {
+            $this->persistAttachments($request->file('attachments'), $ticket, $user);
+        }
+
         return redirect()
             ->route('tickets.show', $ticket)
             ->with('status', 'Ticket created successfully.');
@@ -91,11 +117,14 @@ class TicketController extends Controller
         $user = $request->user();
         $this->ensureCanView($user, $ticket);
 
-        $ticket->load(['category', 'creator', 'assignee', 'messages.user']);
+        $ticket->load(['attachments.user', 'category', 'creator', 'assignee', 'messages.user']);
         $visibleMessages = $this->visibleMessagesFor($ticket, $user);
 
         return view('tickets.show', [
+            'allowedAttachmentText' => $this->allowedAttachmentText(),
+            'attachments' => $ticket->attachments,
             'assignees' => $this->assignableUsers(),
+            'canUploadAttachments' => ! $ticket->status->isFinal(),
             'canDelete' => $this->canDelete($user, $ticket),
             'canManageWorkflow' => $this->canManageWorkflow($user),
             'canUpdate' => $this->canUpdate($user, $ticket),
@@ -104,7 +133,7 @@ class TicketController extends Controller
             'priorities' => TicketPriority::cases(),
             'statuses' => TicketStatus::cases(),
             'ticket' => $ticket,
-            'timelineEvents' => $this->buildTimelineEvents($ticket, $visibleMessages),
+            'timelineEvents' => $this->buildTimelineEvents($ticket, $visibleMessages, $ticket->attachments),
             'user' => $user,
         ]);
     }
@@ -113,6 +142,8 @@ class TicketController extends Controller
     {
         $user = $request->user();
         $this->ensureCanUpdate($user, $ticket);
+        $originalStatus = $ticket->status;
+        $originalAssigneeId = $ticket->assigned_to;
 
         $validated = $request->validate($this->rulesFor($user, $ticket));
 
@@ -135,10 +166,37 @@ class TicketController extends Controller
         }
 
         $ticket->save();
+        $deletedCommentsCount = 0;
 
         if ($ticket->status->isFinal()) {
+            $deletedCommentsCount = $ticket->messages()->count();
             $ticket->messages()->delete();
         }
+
+        $description = "{$user->name} updated ticket {$ticket->ticket_number}.";
+
+        if ($originalStatus !== $ticket->status) {
+            $description = "{$user->name} changed ticket {$ticket->ticket_number} status from {$originalStatus->label()} to {$ticket->status->label()}.";
+        } elseif ($originalAssigneeId !== $ticket->assigned_to) {
+            $description = "{$user->name} updated the assignment for ticket {$ticket->ticket_number}.";
+        }
+
+        if ($deletedCommentsCount > 0 && $ticket->status->isFinal()) {
+            $description .= " {$deletedCommentsCount} ticket comment(s) were cleared after final closure.";
+        }
+
+        AuditLogger::record(
+            'ticket.updated',
+            $description,
+            actor: $user,
+            subject: $ticket,
+            ticket: $ticket,
+            properties: [
+                'from_status' => $originalStatus->value,
+                'to_status' => $ticket->status->value,
+                'deleted_comments_count' => $deletedCommentsCount,
+            ],
+        );
 
         return redirect()
             ->route('tickets.show', $ticket)
@@ -149,6 +207,15 @@ class TicketController extends Controller
     {
         $this->ensureCanDelete($request->user(), $ticket);
 
+        AuditLogger::record(
+            'ticket.deleted',
+            "{$request->user()->name} deleted ticket {$ticket->ticket_number}.",
+            actor: $request->user(),
+            subject: $ticket,
+            ticket: $ticket,
+            properties: ['ticket_number' => $ticket->ticket_number],
+        );
+
         $ticket->delete();
 
         return redirect()
@@ -156,36 +223,163 @@ class TicketController extends Controller
             ->with('status', 'Ticket deleted successfully.');
     }
 
-    public function storeMessage(Request $request, Ticket $ticket): RedirectResponse
+    public function storeMessage(Request $request, Ticket $ticket): RedirectResponse|JsonResponse
     {
         $user = $request->user();
         $this->ensureCanView($user, $ticket);
 
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'body' => ['required', 'string', 'max:4000'],
         ]);
 
-        TicketMessage::create([
+        if ($validator->fails()) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => $validator->errors()->first(),
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+
+            return back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $validated = $validator->validated();
+
+        $message = TicketMessage::create([
             'ticket_id' => $ticket->id,
             'user_id' => $user->id,
             'body' => $validated['body'],
             'is_internal' => false,
-        ]);
+        ])->load('user');
+
+        AuditLogger::record(
+            'ticket.comment_added',
+            "{$user->name} added a comment on ticket {$ticket->ticket_number}.",
+            actor: $user,
+            subject: $ticket,
+            ticket: $ticket,
+        );
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Comment added successfully.',
+                'comment' => $this->formatMessagePayload($message),
+            ]);
+        }
 
         return redirect()
             ->route('tickets.show', $ticket)
             ->with('status', 'Comment added successfully.');
     }
 
+    public function storeAttachment(Request $request, Ticket $ticket): RedirectResponse|JsonResponse
+    {
+        $user = $request->user();
+        $this->ensureCanView($user, $ticket);
+
+        if ($ticket->status->isFinal()) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Files cannot be uploaded after the ticket has been resolved or closed.',
+                ], 422);
+            }
+
+            return back()->withErrors([
+                'attachments' => 'Files cannot be uploaded after the ticket has been resolved or closed.',
+            ]);
+        }
+
+        $validator = Validator::make(
+            $request->all(),
+            $this->attachmentRules(required: true),
+            $this->attachmentMessages(),
+        );
+
+        if ($validator->fails()) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => $validator->errors()->first(),
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+
+            return back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $validated = $validator->validated();
+        $attachments = $this->persistAttachments($validated['attachments'], $ticket, $user);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'File uploaded successfully.',
+                'attachments' => $attachments->map(fn (TicketAttachment $attachment) => $this->formatAttachmentPayload($attachment))->values(),
+            ]);
+        }
+
+        return redirect()
+            ->route('tickets.show', $ticket)
+            ->with('status', 'File uploaded successfully.');
+    }
+
+    public function downloadAttachment(Request $request, TicketAttachment $attachment)
+    {
+        $ticket = $attachment->ticket()->with(['creator'])->firstOrFail();
+        $this->ensureCanView($request->user(), $ticket);
+
+        AuditLogger::record(
+            'ticket.attachment_downloaded',
+            "{$request->user()->name} downloaded {$attachment->original_name} from ticket {$ticket->ticket_number}.",
+            actor: $request->user(),
+            subject: $attachment,
+            ticket: $ticket,
+        );
+
+        return Storage::disk('local')->download($attachment->storage_path, $attachment->original_name);
+    }
+
+    public function openAttachment(Request $request, TicketAttachment $attachment)
+    {
+        $ticket = $attachment->ticket()->with(['creator'])->firstOrFail();
+        $this->ensureCanView($request->user(), $ticket);
+
+        AuditLogger::record(
+            'ticket.attachment_opened',
+            "{$request->user()->name} opened {$attachment->original_name} from ticket {$ticket->ticket_number}.",
+            actor: $request->user(),
+            subject: $attachment,
+            ticket: $ticket,
+        );
+
+        return response()->file(
+            Storage::disk('local')->path($attachment->storage_path),
+            [
+                'Content-Type' => $attachment->mime_type,
+                'Content-Disposition' => 'inline; filename="'.$attachment->original_name.'"',
+            ]
+        );
+    }
+
     protected function canManageWorkflow(User $user): bool
     {
-        return ! $user->hasRole(UserRole::Employee);
+        return $user->hasAnyRole([
+            UserRole::Admin,
+            UserRole::Manager,
+            UserRole::SupportAgent,
+        ]);
     }
 
     protected function canUpdate(User $user, Ticket $ticket): bool
     {
-        if ($this->canManageWorkflow($user)) {
+        if ($user->hasAnyRole([UserRole::Admin, UserRole::Manager])) {
             return true;
+        }
+
+        if ($user->hasRole(UserRole::SupportAgent)) {
+            return $ticket->assigned_to === $user->id || $ticket->assigned_to === null;
         }
 
         return $ticket->created_by === $user->id && ! $ticket->status->isFinal();
@@ -193,7 +387,7 @@ class TicketController extends Controller
 
     protected function canDelete(User $user, Ticket $ticket): bool
     {
-        if ($user->hasAnyRole([UserRole::Admin, UserRole::Manager])) {
+        if ($user->hasRole(UserRole::Admin)) {
             return true;
         }
 
@@ -205,7 +399,10 @@ class TicketController extends Controller
     protected function ensureCanView(User $user, Ticket $ticket): void
     {
         abort_unless(
-            $this->canManageWorkflow($user) || $ticket->created_by === $user->id,
+            Ticket::query()
+                ->visibleTo($user)
+                ->whereKey($ticket->id)
+                ->exists(),
             403,
         );
     }
@@ -249,6 +446,34 @@ class TicketController extends Controller
         return $rules;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    protected function attachmentRules(bool $required = false): array
+    {
+        return [
+            'attachments' => [$required ? 'required' : 'nullable', 'array', 'max:5'],
+            'attachments.*' => [
+                'file',
+                'mimes:'.implode(',', self::ALLOWED_ATTACHMENT_EXTENSIONS),
+                'max:5120',
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    protected function attachmentMessages(): array
+    {
+        return [
+            'attachments.required' => 'Please choose at least one file to upload.',
+            'attachments.max' => 'You can upload up to 5 files at a time.',
+            'attachments.*.mimes' => 'Only PDF, TXT, DOCX, JPG, JPEG, and PNG files are allowed.',
+            'attachments.*.max' => 'Each file must be 5 MB or smaller.',
+        ];
+    }
+
     protected function assignableUsers()
     {
         return User::query()
@@ -262,7 +487,7 @@ class TicketController extends Controller
         return $ticket->messages->values();
     }
 
-    protected function buildTimelineEvents(Ticket $ticket, $messages)
+    protected function buildTimelineEvents(Ticket $ticket, $messages, $attachments)
     {
         $events = collect([
             [
@@ -281,6 +506,16 @@ class TicketController extends Controller
                 'occurred_at' => $message->created_at,
                 'tone' => 'bg-blue-400',
                 'type' => 'comment',
+            ]);
+        }
+
+        foreach ($attachments->sortBy('created_at') as $attachment) {
+            $events->push([
+                'title' => 'File uploaded',
+                'description' => $attachment->user->name.' uploaded '.$attachment->original_name.'.',
+                'occurred_at' => $attachment->created_at,
+                'tone' => 'bg-violet-400',
+                'type' => 'attachment',
             ]);
         }
 
@@ -307,5 +542,74 @@ class TicketController extends Controller
         return $events
             ->sortBy('occurred_at')
             ->values();
+    }
+
+    /**
+     * @param  array<int, UploadedFile>  $files
+     */
+    protected function persistAttachments(array $files, Ticket $ticket, User $user)
+    {
+        $storedAttachments = collect();
+
+        foreach ($files as $file) {
+            $path = $file->store("ticket-attachments/{$ticket->id}", 'local');
+
+            $attachment = TicketAttachment::query()->create([
+                'ticket_id' => $ticket->id,
+                'user_id' => $user->id,
+                'original_name' => $file->getClientOriginalName(),
+                'storage_path' => $path,
+                'mime_type' => $file->getMimeType() ?: 'application/octet-stream',
+                'extension' => strtolower($file->getClientOriginalExtension()),
+                'file_size' => $file->getSize(),
+            ]);
+
+            AuditLogger::record(
+                'ticket.attachment_uploaded',
+                "{$user->name} uploaded {$attachment->original_name} to ticket {$ticket->ticket_number}.",
+                actor: $user,
+                subject: $attachment,
+                ticket: $ticket,
+                properties: [
+                    'original_name' => $attachment->original_name,
+                    'file_size' => $attachment->file_size,
+                ],
+            );
+
+            $storedAttachments->push($attachment->loadMissing('user'));
+        }
+
+        return $storedAttachments;
+    }
+
+    protected function allowedAttachmentText(): string
+    {
+        return 'Allowed files: PDF, TXT, DOCX, JPG, JPEG, and PNG.';
+    }
+
+    protected function formatAttachmentPayload(TicketAttachment $attachment): array
+    {
+        return [
+            'id' => $attachment->id,
+            'original_name' => $attachment->original_name,
+            'extension' => strtoupper($attachment->extension),
+            'uploaded_at' => $attachment->created_at->format('d M Y, h:i A'),
+            'user_name' => $attachment->user?->name ?? 'Unknown',
+            'human_size' => $attachment->humanReadableSize(),
+            'download_url' => route('tickets.attachments.download', $attachment),
+            'open_url' => route('tickets.attachments.open', $attachment),
+        ];
+    }
+
+    protected function formatMessagePayload(TicketMessage $message): array
+    {
+        return [
+            'id' => $message->id,
+            'user_name' => $message->user->name,
+            'role_label' => $message->user->role->label(),
+            'body' => $message->body,
+            'created_at' => $message->created_at->format('d M Y, h:i A'),
+            'initial' => strtoupper(substr($message->user->name, 0, 1)),
+        ];
     }
 }

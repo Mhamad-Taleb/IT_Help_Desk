@@ -16,6 +16,11 @@
             'route' => route('profile.edit'),
             'active' => request()->routeIs('profile.*'),
         ],
+        [
+            'label' => 'History',
+            'route' => route('history'),
+            'active' => request()->routeIs('history'),
+        ],
     ];
 
     if (Auth::user()->isAdmin()) {
@@ -44,10 +49,10 @@
 
     <aside
         :class="open ? 'translate-x-0' : '-translate-x-full'"
-        class="fixed inset-y-0 left-0 z-50 flex w-[18rem] flex-col border-r border-white/10 bg-[#0c5c70] text-white shadow-[0_30px_80px_rgba(2,21,28,0.28)] transition-transform duration-300 ease-out lg:static lg:z-auto lg:w-[18.5rem] lg:translate-x-0 lg:shadow-none xl:w-[20rem]"
+        class="app-sidebar fixed inset-y-0 left-0 z-50 flex w-[18rem] flex-col border-r border-white/10 bg-[#0c5c70] text-white shadow-[0_30px_80px_rgba(2,21,28,0.28)] transition-transform duration-300 ease-out lg:static lg:z-auto lg:w-[18.5rem] lg:translate-x-0 lg:shadow-none xl:w-[20rem]"
     >
         <div class="flex h-full flex-col px-4 py-5 sm:px-5">
-            <div class="rounded-[1.65rem] border border-white/12 bg-white/6 p-3.5 backdrop-blur-sm">
+            <div class="app-sidebar-card rounded-[1.65rem] border border-white/12 bg-white/6 p-3.5 backdrop-blur-sm">
                 <a href="{{ route('dashboard') }}" class="flex items-center justify-center">
                     @if (file_exists(public_path($idsLogoPath)))
                         <img src="{{ asset($idsLogoPath) }}" alt="IDS Logo" class="h-9 w-auto max-w-full object-contain" />
@@ -59,7 +64,7 @@
                     @endif
                 </a>
 
-                <div class="mt-4 rounded-[1.25rem] border border-white/10 bg-slate-950/12 px-3.5 py-3.5">
+                <div class="app-user-card mt-4 rounded-[1.25rem] border border-white/10 bg-slate-950/12 px-3.5 py-3.5">
                     <p class="text-[0.65rem] font-semibold uppercase tracking-[0.32em] text-cyan-100/70">Signed In As</p>
                     <h2 class="mt-2 text-[1.35rem] font-semibold leading-tight text-white">{{ Auth::user()->name }}</h2>
                 </div>
@@ -70,18 +75,18 @@
                     <a
                         href="{{ $item['route'] }}"
                         @class([
-                            'flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition duration-200',
-                            'bg-white text-slate-900 shadow-[0_18px_30px_rgba(255,255,255,0.12)]' => $item['active'],
-                            'text-cyan-50/88 hover:bg-white/10 hover:text-white' => ! $item['active'],
+                            'app-nav-link flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition duration-200',
+                            'app-nav-link-active bg-white text-slate-900 shadow-[0_18px_30px_rgba(255,255,255,0.12)]' => $item['active'],
+                            'app-nav-link-inactive text-cyan-50/88 hover:bg-white/10 hover:text-white' => ! $item['active'],
                         ])
                     >
-                        <span class="h-2.5 w-2.5 rounded-full {{ $item['active'] ? 'bg-[#0f7b92]' : 'bg-cyan-200/40' }}"></span>
+                        <span class="app-nav-dot h-2.5 w-2.5 rounded-full {{ $item['active'] ? 'bg-[#0f7b92]' : 'bg-cyan-200/40' }}"></span>
                         <span>{{ $item['label'] }}</span>
                     </a>
                 @endforeach
             </nav>
 
-            <div class="mt-5 rounded-[1.6rem] border border-white/10 bg-white/6 p-3 backdrop-blur-sm">
+            <div class="app-logout-panel mt-5 rounded-[1.6rem] border border-white/10 bg-white/6 p-3 backdrop-blur-sm">
                 <a
                     href="{{ route('profile.edit') }}"
                     class="mb-3 flex items-center justify-between rounded-2xl px-3 py-3 text-sm text-cyan-50/88 transition hover:bg-white/10 hover:text-white lg:hidden"
@@ -94,7 +99,7 @@
                     @csrf
                     <button
                         type="submit"
-                        class="flex w-full items-center justify-between rounded-2xl bg-slate-950/30 px-4 py-3 text-sm font-semibold uppercase tracking-[0.22em] text-white transition hover:bg-slate-950/45"
+                        class="app-logout-button flex w-full items-center justify-between rounded-2xl bg-slate-950/30 px-4 py-3 text-sm font-semibold uppercase tracking-[0.22em] text-white transition hover:bg-slate-950/45"
                     >
                         <span>Log Out</span>
                         <span class="text-lg leading-none">&gt;</span>
@@ -104,8 +109,8 @@
         </div>
     </aside>
 
-    <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <div class="border-b border-slate-200/80 bg-white/85 px-4 py-4 backdrop-blur-md sm:px-6 lg:hidden">
+    <div class="app-main-shell flex min-w-0 flex-1 flex-col overflow-hidden">
+        <div class="app-mobile-header border-b border-slate-200/80 bg-white/85 px-4 py-4 backdrop-blur-md sm:px-6 lg:hidden">
             <div class="flex items-center justify-between gap-4">
                 <a href="{{ route('dashboard') }}" class="inline-flex items-center gap-3 text-slate-900">
                     <span class="rounded-2xl bg-[#0c5c70] px-3 py-2 text-xs font-semibold uppercase tracking-[0.28em] text-white">
@@ -125,14 +130,14 @@
             </div>
         </div>
 
-        <main class="flex-1 overflow-y-auto">
+        <main class="app-main-view flex-1 overflow-y-auto">
             @isset($header)
-                <header class="border-b border-slate-200/80 bg-white/70 px-4 py-5 backdrop-blur-md sm:px-6 lg:px-8 xl:px-10">
+                <header class="app-main-header relative z-40 border-b border-slate-200/80 bg-white/70 px-4 py-5 backdrop-blur-md sm:px-6 lg:px-8 xl:px-10">
                     {{ $header }}
                 </header>
             @endisset
 
-            <div class="px-4 py-6 sm:px-6 lg:px-8 xl:px-10">
+            <div class="app-main-content relative z-0 px-4 py-6 sm:px-6 lg:px-8 xl:px-10">
                 {{ $slot }}
             </div>
         </main>

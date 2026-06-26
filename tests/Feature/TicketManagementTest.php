@@ -8,10 +8,12 @@ use App\Enums\UserRole;
 use App\Models\Category;
 use App\Models\Ticket;
 use App\Models\TicketAttachment;
+use App\Models\TicketChatMessage;
 use App\Models\TicketMessage;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -21,16 +23,38 @@ class TicketManagementTest extends TestCase
 
     public function test_employee_can_create_a_ticket(): void
     {
+        config()->set('services.openai.api_key', 'test-openai-key');
+        config()->set('services.openai.ticket_classification_enabled', true);
+
         $employee = User::factory()->create([
             'role' => UserRole::Employee,
         ]);
-        $category = Category::factory()->create();
+        $networkCategory = Category::factory()->create([
+            'name' => 'Network',
+            'is_active' => true,
+        ]);
+        Category::factory()->create([
+            'name' => 'Hardware',
+            'is_active' => true,
+        ]);
+
+        Http::fake([
+            'https://api.openai.com/v1/responses' => Http::response([
+                'output' => [[
+                    'content' => [[
+                        'text' => json_encode([
+                            'category_name' => 'Network',
+                            'priority' => TicketPriority::High->value,
+                            'reason' => 'Connectivity issue is blocking the employee from working.',
+                        ], JSON_THROW_ON_ERROR),
+                    ]],
+                ]],
+            ], 200),
+        ]);
 
         $response = $this->actingAs($employee)->post(route('tickets.store'), [
             'title' => 'Laptop cannot connect to Wi-Fi',
             'description' => 'The laptop sees the network but fails during authentication.',
-            'category_id' => $category->id,
-            'priority' => TicketPriority::High->value,
         ]);
 
         $response->assertRedirect();
@@ -38,7 +62,42 @@ class TicketManagementTest extends TestCase
         $this->assertDatabaseHas('tickets', [
             'title' => 'Laptop cannot connect to Wi-Fi',
             'created_by' => $employee->id,
-            'category_id' => $category->id,
+            'category_id' => $networkCategory->id,
+            'priority' => TicketPriority::High->value,
+            'status' => TicketStatus::Open->value,
+        ]);
+    }
+
+    public function test_employee_ticket_creation_falls_back_when_ai_is_unavailable(): void
+    {
+        config()->set('services.openai.api_key', 'test-openai-key');
+        config()->set('services.openai.ticket_classification_enabled', true);
+
+        $employee = User::factory()->create([
+            'role' => UserRole::Employee,
+        ]);
+        $hardwareCategory = Category::factory()->create([
+            'name' => 'Hardware',
+            'is_active' => true,
+        ]);
+
+        Http::fake([
+            'https://api.openai.com/v1/responses' => function () {
+                throw new \RuntimeException('AI service unavailable');
+            },
+        ]);
+
+        $response = $this->actingAs($employee)->post(route('tickets.store'), [
+            'title' => 'Laptop screen is broken',
+            'description' => 'My laptop screen is not working and I cannot continue my work.',
+        ]);
+
+        $response->assertRedirect();
+
+        $this->assertDatabaseHas('tickets', [
+            'title' => 'Laptop screen is broken',
+            'created_by' => $employee->id,
+            'category_id' => $hardwareCategory->id,
             'priority' => TicketPriority::High->value,
             'status' => TicketStatus::Open->value,
         ]);
@@ -443,6 +502,71 @@ class TicketManagementTest extends TestCase
             'body' => 'The issue has been checked and I am working on a fix.',
             'is_internal' => false,
         ]);
+    }
+
+    public function test_employee_can_send_a_ticket_chat_message_to_the_assigned_agent(): void
+    {
+        config()->set('broadcasting.default', 'log');
+
+        $employee = User::factory()->create([
+            'role' => UserRole::Employee,
+            'name' => 'Ali Employee',
+        ]);
+
+        $agent = User::factory()->create([
+            'role' => UserRole::SupportAgent,
+            'name' => 'Bilal Agent',
+        ]);
+
+        $ticket = Ticket::factory()->create([
+            'created_by' => $employee->id,
+            'assigned_to' => $agent->id,
+        ]);
+
+        $response = $this->actingAs($employee)->postJson(route('tickets.chat.messages.store', $ticket), [
+            'body' => 'Can you check my laptop issue now?',
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('chat_message.body', 'Can you check my laptop issue now?');
+
+        $this->assertDatabaseHas('ticket_chat_messages', [
+            'ticket_id' => $ticket->id,
+            'user_id' => $employee->id,
+            'body' => 'Can you check my laptop issue now?',
+        ]);
+
+        $this->assertDatabaseMissing('ticket_messages', [
+            'ticket_id' => $ticket->id,
+            'body' => 'Can you check my laptop issue now?',
+        ]);
+    }
+
+    public function test_ticket_chat_messages_do_not_appear_in_the_comments_box(): void
+    {
+        $employee = User::factory()->create([
+            'role' => UserRole::Employee,
+        ]);
+
+        $agent = User::factory()->create([
+            'role' => UserRole::SupportAgent,
+        ]);
+
+        $ticket = Ticket::factory()->create([
+            'created_by' => $employee->id,
+            'assigned_to' => $agent->id,
+        ]);
+
+        TicketChatMessage::factory()->create([
+            'ticket_id' => $ticket->id,
+            'user_id' => $agent->id,
+            'body' => 'This is a private live chat message.',
+        ]);
+
+        $response = $this->actingAs($employee)->get(route('tickets.show', $ticket));
+
+        $response->assertOk();
+        $response->assertDontSeeText('This is a private live chat message.');
     }
 
     public function test_employee_can_see_support_comment_on_the_ticket_screen(): void

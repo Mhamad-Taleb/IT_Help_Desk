@@ -2,15 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\TicketChatMessageSent;
 use App\Enums\TicketPriority;
 use App\Enums\TicketStatus;
 use App\Enums\UserRole;
 use App\Models\Category;
 use App\Models\Ticket;
 use App\Models\TicketAttachment;
+use App\Models\TicketChatMessage;
 use App\Models\TicketMessage;
 use App\Models\User;
 use App\Support\AuditLogger;
+use App\Services\AiTicketClassifierService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -70,29 +73,29 @@ class TicketController extends Controller
     {
         return view('tickets.create', [
             'allowedAttachmentText' => $this->allowedAttachmentText(),
-            'assignees' => $this->assignableUsers(),
-            'categories' => Category::query()->active()->ordered()->get(),
-            'priorities' => TicketPriority::cases(),
-            'user' => $request->user(),
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, AiTicketClassifierService $classifier): RedirectResponse
     {
         $user = $request->user();
         $validated = $request->validate(
-            array_merge($this->rulesFor($user), $this->attachmentRules()),
+            array_merge($this->storeRulesFor($user), $this->attachmentRules()),
             $this->attachmentMessages(),
+        );
+        $classification = $classifier->classify(
+            $validated['title'],
+            $validated['description'],
         );
 
         $ticket = Ticket::create([
             'title' => $validated['title'],
             'description' => $validated['description'],
-            'category_id' => $validated['category_id'],
-            'priority' => $validated['priority'],
+            'category_id' => $classification['category_id'],
+            'priority' => $classification['priority'],
             'status' => TicketStatus::Open,
             'created_by' => $user->id,
-            'assigned_to' => $this->canManageWorkflow($user) ? ($validated['assigned_to'] ?? null) : null,
+            'assigned_to' => null,
         ]);
 
         AuditLogger::record(
@@ -101,6 +104,12 @@ class TicketController extends Controller
             actor: $user,
             subject: $ticket,
             ticket: $ticket,
+            properties: [
+                'classification_source' => $classification['source'] ?? 'unknown',
+                'classification_reason' => $classification['reason'] ?? null,
+                'detected_category' => $classification['category_name'] ?? null,
+                'detected_priority' => $classification['priority'] ?? null,
+            ],
         );
 
         if ($request->hasFile('attachments')) {
@@ -125,6 +134,8 @@ class TicketController extends Controller
             'attachments' => $ticket->attachments,
             'assignees' => $this->assignableUsers(),
             'canUploadAttachments' => ! $ticket->status->isFinal(),
+            'chatAvailable' => $this->chatAvailable($ticket),
+            'chatButtonLabel' => $this->chatButtonLabel($user, $ticket),
             'canDelete' => $this->canDelete($user, $ticket),
             'canManageWorkflow' => $this->canManageWorkflow($user),
             'canUpdate' => $this->canUpdate($user, $ticket),
@@ -134,6 +145,23 @@ class TicketController extends Controller
             'statuses' => TicketStatus::cases(),
             'ticket' => $ticket,
             'timelineEvents' => $this->buildTimelineEvents($ticket, $visibleMessages, $ticket->attachments),
+            'user' => $user,
+        ]);
+    }
+
+    public function chat(Request $request, Ticket $ticket): View
+    {
+        $user = $request->user();
+        $this->ensureCanView($user, $ticket);
+        abort_unless($this->chatAvailable($ticket), 404);
+
+        $ticket->load(['category', 'creator', 'assignee', 'chatMessages.user']);
+        $messages = $ticket->chatMessages->sortBy('created_at')->values();
+
+        return view('tickets.chat', [
+            'chatPartnerLabel' => $this->chatButtonLabel($user, $ticket),
+            'messages' => $messages,
+            'ticket' => $ticket,
             'user' => $user,
         ]);
     }
@@ -269,9 +297,83 @@ class TicketController extends Controller
             ]);
         }
 
+        if ($request->string('redirect_to')->toString() === 'chat') {
+            return redirect()
+                ->route('tickets.chat', $ticket)
+                ->with('status', 'Message sent successfully.');
+        }
+
         return redirect()
             ->route('tickets.show', $ticket)
             ->with('status', 'Comment added successfully.');
+    }
+
+    public function storeChatMessage(Request $request, Ticket $ticket): RedirectResponse|JsonResponse
+    {
+        $user = $request->user();
+        $this->ensureCanView($user, $ticket);
+        abort_unless($this->chatAvailable($ticket), 404);
+
+        if ($ticket->status->isFinal()) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Chat is read-only after the ticket has been resolved or closed.',
+                ], 422);
+            }
+
+            return back()->withErrors([
+                'body' => 'Chat is read-only after the ticket has been resolved or closed.',
+            ]);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'body' => ['required', 'string', 'max:4000'],
+        ]);
+
+        if ($validator->fails()) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => $validator->errors()->first(),
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+
+            return back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $message = TicketChatMessage::query()->create([
+            'ticket_id' => $ticket->id,
+            'user_id' => $user->id,
+            'body' => $validator->validated()['body'],
+        ])->load('user');
+
+        AuditLogger::record(
+            'ticket.chat_message_sent',
+            "{$user->name} sent a chat message on ticket {$ticket->ticket_number}.",
+            actor: $user,
+            subject: $message,
+            ticket: $ticket,
+            targetUser: $this->chatTargetUser($ticket, $user),
+            properties: [
+                'ticket_number' => $ticket->ticket_number,
+                'chat_message_id' => $message->id,
+            ],
+        );
+
+        broadcast(new TicketChatMessageSent($message))->toOthers();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Chat message sent successfully.',
+                'chat_message' => $this->formatChatMessagePayload($message),
+            ]);
+        }
+
+        return redirect()
+            ->route('tickets.chat', $ticket)
+            ->with('status', 'Chat message sent successfully.');
     }
 
     public function storeAttachment(Request $request, Ticket $ticket): RedirectResponse|JsonResponse
@@ -396,6 +498,41 @@ class TicketController extends Controller
             && $ticket->status === TicketStatus::Open;
     }
 
+    protected function chatAvailable(Ticket $ticket): bool
+    {
+        return $ticket->assigned_to !== null;
+    }
+
+    protected function chatButtonLabel(User $user, Ticket $ticket): string
+    {
+        if (! $this->chatAvailable($ticket)) {
+            return 'Awaiting Agent';
+        }
+
+        if ($user->hasRole(UserRole::Employee)) {
+            return 'Chat with '.$ticket->assignee?->name;
+        }
+
+        if ($user->hasRole(UserRole::SupportAgent) && $ticket->assigned_to === $user->id) {
+            return 'Chat with '.$ticket->creator->name;
+        }
+
+        return 'Open Ticket Chat';
+    }
+
+    protected function chatTargetUser(Ticket $ticket, User $sender): ?User
+    {
+        if ($sender->id === $ticket->creator?->id) {
+            return $ticket->assignee;
+        }
+
+        if ($sender->id === $ticket->assignee?->id) {
+            return $ticket->creator;
+        }
+
+        return $ticket->creator;
+    }
+
     protected function ensureCanView(User $user, Ticket $ticket): void
     {
         abort_unless(
@@ -444,6 +581,17 @@ class TicketController extends Controller
         }
 
         return $rules;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function storeRulesFor(User $user): array
+    {
+        return [
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['required', 'string', 'max:5000'],
+        ];
     }
 
     /**
@@ -609,6 +757,21 @@ class TicketController extends Controller
             'role_label' => $message->user->role->label(),
             'body' => $message->body,
             'created_at' => $message->created_at->format('d M Y, h:i A'),
+            'initial' => strtoupper(substr($message->user->name, 0, 1)),
+        ];
+    }
+
+    protected function formatChatMessagePayload(TicketChatMessage $message): array
+    {
+        return [
+            'id' => $message->id,
+            'ticket_id' => $message->ticket_id,
+            'user_id' => $message->user_id,
+            'user_name' => $message->user->name,
+            'role_label' => $message->user->role->label(),
+            'body' => $message->body,
+            'created_at' => $message->created_at->format('d M Y, h:i A'),
+            'time' => $message->created_at->format('h:i A'),
             'initial' => strtoupper(substr($message->user->name, 0, 1)),
         ];
     }

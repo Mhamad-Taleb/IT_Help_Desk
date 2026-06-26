@@ -220,6 +220,8 @@
         </section>
 
         @if ($isAdmin)
+            
+
             <section class="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_24rem]">
                 <article class="dashboard-panel overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
                     <div class="border-b border-slate-200 px-6 py-5">
@@ -244,20 +246,7 @@
                     </div>
 
                     <div class="px-6 py-6">
-                        <div class="grid gap-4 sm:grid-cols-3">
-                            <div class="rounded-[1.35rem] bg-slate-50 p-4">
-                                <p class="text-[0.66rem] font-bold uppercase tracking-[0.24em] text-slate-500">This Month Created</p>
-                                <p class="mt-3 text-3xl font-black text-slate-950">{{ $createdThisMonth }}</p>
-                            </div>
-                            <div class="rounded-[1.35rem] bg-slate-50 p-4">
-                                <p class="text-[0.66rem] font-bold uppercase tracking-[0.24em] text-slate-500">This Month Resolved</p>
-                                <p class="mt-3 text-3xl font-black text-slate-950">{{ $resolvedThisMonth }}</p>
-                            </div>
-                            <div class="rounded-[1.35rem] bg-slate-50 p-4">
-                                <p class="text-[0.66rem] font-bold uppercase tracking-[0.24em] text-slate-500">14-Day Peak</p>
-                                <p class="mt-3 text-3xl font-black text-slate-950">{{ $trendMax }}</p>
-                            </div>
-                        </div>
+                        
 
                         <div class="mt-6 overflow-hidden rounded-[1.7rem] border border-slate-200 bg-slate-50 px-4 py-5">
                             <svg viewBox="0 0 576 240" class="h-[18rem] w-full">
@@ -538,6 +527,7 @@
                     </div>
                 </article>
             </section>
+
         @else
             @if ($isManager)
                 <section class="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
@@ -772,4 +762,5 @@
             </div>
         </x-modal>
     @endif
+
 </x-app-layout>

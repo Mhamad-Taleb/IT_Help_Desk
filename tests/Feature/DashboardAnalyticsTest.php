@@ -278,4 +278,17 @@ class DashboardAnalyticsTest extends TestCase
         $response->assertDontSeeText('Top Categories');
         $response->assertDontSeeText('Priority Analytics');
     }
+
+    public function test_admin_dashboard_does_not_show_the_user_ticket_directory_section(): void
+    {
+        $admin = User::factory()->create([
+            'role' => UserRole::Admin,
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('dashboard'));
+
+        $response->assertOk();
+        $response->assertDontSeeText('Tickets By Team Member');
+        $response->assertDontSeeText('Admin Ticket Directory');
+    }
 }

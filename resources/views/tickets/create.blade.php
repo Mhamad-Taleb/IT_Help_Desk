@@ -36,43 +36,28 @@
                     <textarea id="description" name="description" rows="7" class="mt-2 block w-full rounded-2xl border-slate-300 shadow-sm focus:border-slate-500 focus:ring-slate-500" required placeholder="Describe the problem, error messages, and steps already tried.">{{ old('description') }}</textarea>
                 </div>
 
-                <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-                    <div>
-                        <x-input-label for="category_id" value="Category" />
-                        <select id="category_id" name="category_id" class="mt-2 block h-[3.1rem] w-full rounded-2xl border-slate-300 text-sm shadow-sm focus:border-slate-500 focus:ring-slate-500" required>
-                            <option value="">Select category</option>
-                            @foreach ($categories as $category)
-                                <option value="{{ $category->id }}" @selected((string) old('category_id') === (string) $category->id)>
-                                    {{ $category->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
+                <div class="overflow-hidden rounded-[1.6rem] border border-cyan-100 bg-gradient-to-r from-cyan-50 via-sky-50 to-white p-5 shadow-[0_18px_40px_rgba(14,116,144,0.08)]">
+                    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div class="flex items-start gap-4">
+                            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-cyan-700 shadow-sm ring-1 ring-cyan-100">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.9" d="M12 3l1.9 4.6L18.5 9 15 12.1l.9 4.9L12 14.8 8.1 17l.9-4.9L5.5 9l4.6-1.4L12 3z" />
+                                </svg>
+                            </div>
 
-                    <div>
-                        <x-input-label for="priority" value="Priority" />
-                        <select id="priority" name="priority" class="mt-2 block h-[3.1rem] w-full rounded-2xl border-slate-300 text-sm shadow-sm focus:border-slate-500 focus:ring-slate-500" required>
-                            @foreach ($priorities as $priority)
-                                <option value="{{ $priority->value }}" @selected(old('priority', \App\Enums\TicketPriority::Medium->value) === $priority->value)>
-                                    {{ $priority->label() }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    @if (! $user->hasRole(\App\Enums\UserRole::Employee))
-                        <div>
-                            <x-input-label for="assigned_to" value="Assign To" />
-                            <select id="assigned_to" name="assigned_to" class="mt-2 block h-[3.1rem] w-full rounded-2xl border-slate-300 text-sm shadow-sm focus:border-slate-500 focus:ring-slate-500">
-                                <option value="">Unassigned</option>
-                                @foreach ($assignees as $assignee)
-                                    <option value="{{ $assignee->id }}" @selected((string) old('assigned_to') === (string) $assignee->id)>
-                                        {{ $assignee->name }} - {{ $assignee->role->label() }}
-                                    </option>
-                                @endforeach
-                            </select>
+                            <div>
+                                <p class="text-[0.68rem] font-semibold uppercase tracking-[0.28em] text-cyan-700">AI Assistance</p>
+                                <h3 class="mt-2 text-lg font-semibold tracking-tight text-slate-950">Smart Ticket Classification</h3>
+                                <p class="mt-1.5 max-w-2xl text-sm leading-6 text-slate-600">
+                                    Enter the issue title and description only. The system will automatically detect the best category and priority before the ticket is created.
+                                </p>
+                            </div>
                         </div>
-                    @endif
+
+                        <span class="inline-flex w-fit shrink-0 items-center rounded-full border border-cyan-100 bg-white/90 px-4 py-2 text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-cyan-700 shadow-sm whitespace-nowrap">
+                            Smart Intake
+                        </span>
+                    </div>
                 </div>
 
                 <div class="rounded-[1.5rem] border border-slate-200 bg-slate-50/80 p-5">
@@ -115,7 +100,7 @@
             <div class="mt-6 space-y-4 text-sm leading-7 text-cyan-50/90">
                 <p>Use a short, concrete title that clearly describes the problem.</p>
                 <p>Include screenshots, system behavior, or steps already attempted when you add attachments.</p>
-                <p>Choose the right priority so the support team can triage workload correctly.</p>
+                <p>The system will auto-detect the category and priority, so clear descriptions lead to better routing.</p>
             </div>
         </aside>
     </div>

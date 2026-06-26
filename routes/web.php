@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\Admin\CategoryManagementController;
+use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\UserManagementController;
+use App\Http\Controllers\AiAssistantController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HistoryController;
 use App\Http\Controllers\NotificationController;
@@ -26,10 +28,16 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:employee')->group(function () {
         Route::get('/tickets/create', [TicketController::class, 'create'])->name('tickets.create');
         Route::post('/tickets', [TicketController::class, 'store'])->name('tickets.store');
+        Route::get('/assistant', [AiAssistantController::class, 'index'])->name('assistant.index');
+        Route::post('/assistant/chats', [AiAssistantController::class, 'store'])->name('assistant.store');
+        Route::get('/assistant/chats/{chat}', [AiAssistantController::class, 'show'])->name('assistant.show');
+        Route::post('/assistant/chats/{chat}/messages', [AiAssistantController::class, 'storeMessage'])->name('assistant.messages.store');
     });
 
     Route::get('/tickets/{ticket}', [TicketController::class, 'show'])->name('tickets.show');
+    Route::get('/tickets/{ticket}/chat', [TicketController::class, 'chat'])->name('tickets.chat');
     Route::post('/tickets/{ticket}/messages', [TicketController::class, 'storeMessage'])->name('tickets.messages.store');
+    Route::post('/tickets/{ticket}/chat/messages', [TicketController::class, 'storeChatMessage'])->name('tickets.chat.messages.store');
     Route::post('/tickets/{ticket}/attachments', [TicketController::class, 'storeAttachment'])->name('tickets.attachments.store');
     Route::get('/ticket-attachments/{attachment}', [TicketController::class, 'downloadAttachment'])->name('tickets.attachments.download');
     Route::get('/ticket-attachments/{attachment}/open', [TicketController::class, 'openAttachment'])->name('tickets.attachments.open');
@@ -43,6 +51,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
         Route::redirect('/', '/admin/users')->name('index');
         Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
+        Route::get('/users/{user}/activity', [UserManagementController::class, 'activity'])->name('users.activity');
         Route::post('/users', [UserManagementController::class, 'store'])->name('users.store');
         Route::patch('/users/{user}', [UserManagementController::class, 'update'])->name('users.update');
         Route::delete('/users/{user}', [UserManagementController::class, 'destroy'])->name('users.destroy');
@@ -50,6 +59,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/categories', [CategoryManagementController::class, 'store'])->name('categories.store');
         Route::patch('/categories/{category}', [CategoryManagementController::class, 'update'])->name('categories.update');
         Route::delete('/categories/{category}', [CategoryManagementController::class, 'destroy'])->name('categories.destroy');
+        Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+        Route::get('/reports/export/pdf', [ReportController::class, 'exportPdf'])->name('reports.export.pdf');
     });
 });
 

@@ -76,6 +76,11 @@ class Ticket extends Model
         return $this->hasMany(TicketMessage::class)->latest();
     }
 
+    public function chatMessages(): HasMany
+    {
+        return $this->hasMany(TicketChatMessage::class)->latest();
+    }
+
     public function attachments(): HasMany
     {
         return $this->hasMany(TicketAttachment::class)->latest();

@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Models\AuditLog;
+use App\Models\Ticket;
 use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -137,5 +139,52 @@ class UserManagementTest extends TestCase
         $this->assertDatabaseHas('users', [
             'id' => $admin->id,
         ]);
+    }
+
+    public function test_admin_can_view_activity_for_a_non_admin_user(): void
+    {
+        $admin = User::factory()->create([
+            'role' => UserRole::Admin,
+        ]);
+
+        $employee = User::factory()->create([
+            'role' => UserRole::Employee,
+            'name' => 'Employee User',
+        ]);
+
+        $ticket = Ticket::factory()->create([
+            'created_by' => $employee->id,
+        ]);
+
+        AuditLog::factory()->create([
+            'user_id' => $employee->id,
+            'target_user_id' => $employee->id,
+            'ticket_id' => $ticket->id,
+            'action' => 'ticket.created',
+            'description' => 'Employee activity log.',
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('admin.users.activity', $employee));
+
+        $response->assertOk();
+        $response->assertSeeText('Employee User');
+        $response->assertSeeText('Linked Tickets');
+        $response->assertSeeText('Activity Stream');
+        $response->assertSeeText('Employee activity log.');
+    }
+
+    public function test_admin_cannot_open_activity_page_for_admin_account(): void
+    {
+        $admin = User::factory()->create([
+            'role' => UserRole::Admin,
+        ]);
+
+        $otherAdmin = User::factory()->create([
+            'role' => UserRole::Admin,
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('admin.users.activity', $otherAdmin));
+
+        $response->assertNotFound();
     }
 }

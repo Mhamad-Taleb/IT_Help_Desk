@@ -35,4 +35,23 @@ return [
         ],
     ],
 
+    'openai' => [
+        'api_key' => env('OPENAI_API_KEY'),
+        'model' => env('OPENAI_MODEL', 'gpt-4.1-mini'),
+        'ticket_classification_enabled' => env('AI_TICKET_CLASSIFICATION_ENABLED', true),
+        'assistant_enabled' => env('OPENAI_ASSISTANT_ENABLED', true),
+        'assistant_model' => env('OPENAI_ASSISTANT_MODEL', env('OPENAI_MODEL', 'gpt-4.1-mini')),
+        'assistant_vector_store_id' => env('OPENAI_ASSISTANT_VECTOR_STORE_ID'),
+    ],
+
+    'ai' => [
+        'provider' => env('AI_PROVIDER', 'openai'),
+    ],
+
+    'ollama' => [
+        'base_url' => env('OLLAMA_BASE_URL', 'http://localhost:11434'),
+        'model' => env('OLLAMA_MODEL', 'llama3.2:3b'),
+        'assistant_enabled' => env('OLLAMA_ASSISTANT_ENABLED', true),
+    ],
+
 ];

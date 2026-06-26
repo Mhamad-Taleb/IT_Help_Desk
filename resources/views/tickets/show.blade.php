@@ -29,17 +29,13 @@
                         </a>
 
                         @if ($canDelete)
-                            <form method="POST" action="{{ route('tickets.destroy', $ticket) }}" onsubmit="return confirm('Delete this ticket permanently?');">
-                                @csrf
-                                @method('DELETE')
-
-                                <button
-                                    type="submit"
-                                    class="inline-flex items-center justify-center rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-rose-700"
-                                >
-                                    Delete Ticket
-                                </button>
-                            </form>
+                            <button
+                                type="button"
+                                x-on:click="$dispatch('open-modal', 'delete-ticket-modal')"
+                                class="inline-flex items-center justify-center rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-rose-700"
+                            >
+                                Delete Ticket
+                            </button>
                         @endif
                     </div>
                 </div>
@@ -82,15 +78,11 @@
         x-on:ticket-comment-added.window="prependComment($event.detail.comment); $dispatch('close-modal', 'add-comment-modal')"
     >
         @if (session('status'))
-            <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 shadow-sm">
-                {{ session('status') }}
-            </div>
+            <x-auto-dismiss-alert :message="session('status')" />
         @endif
 
         @if ($errors->any())
-            <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800 shadow-sm">
-                {{ $errors->first() }}
-            </div>
+            <x-auto-dismiss-alert type="error" :message="$errors->first()" />
         @endif
 
         <section class="ticket-show-panel overflow-hidden rounded-[1.7rem] border border-slate-200 bg-white shadow-sm">
@@ -150,6 +142,23 @@
                                 class="inline-flex items-center justify-center rounded-xl border border-violet-200 bg-white px-4 py-2.5 text-sm font-bold text-violet-700 shadow-sm transition hover:bg-violet-50"
                             >
                                 Upload File
+                            </button>
+                        @endif
+
+                        @if ($chatAvailable)
+                            <a
+                                href="{{ route('tickets.chat', $ticket) }}"
+                                class="inline-flex items-center justify-center rounded-xl border border-emerald-200 bg-white px-4 py-2.5 text-sm font-bold text-emerald-700 shadow-sm transition hover:bg-emerald-50"
+                            >
+                                {{ $chatButtonLabel }}
+                            </a>
+                        @else
+                            <button
+                                type="button"
+                                disabled
+                                class="inline-flex cursor-not-allowed items-center justify-center rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm font-bold text-slate-400 shadow-sm"
+                            >
+                                {{ $chatButtonLabel }}
                             </button>
                         @endif
 
@@ -677,6 +686,47 @@
                         </button>
                     </div>
                 </form>
+            </div>
+        </x-modal>
+    @endif
+
+    @if ($canDelete)
+        <x-modal name="delete-ticket-modal" maxWidth="md" focusable>
+            <div class="rounded-[1.7rem] bg-white p-6 shadow-xl">
+                <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-rose-100 text-2xl font-black text-rose-600">
+                    !
+                </div>
+
+                <div class="mt-5 text-center">
+                    <p class="text-xs font-black uppercase tracking-[0.22em] text-rose-500">Delete Ticket</p>
+                    <h3 class="mt-2 text-2xl font-black text-slate-950">Delete this ticket permanently?</h3>
+                    <p class="mt-2 text-sm leading-6 text-slate-500">
+                        This action cannot be undone. The ticket and its related records will be removed from the system.
+                    </p>
+                </div>
+
+                <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+                    <button
+                        type="button"
+                        x-data
+                        x-on:click="$dispatch('close-modal', 'delete-ticket-modal')"
+                        class="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+                    >
+                        Cancel
+                    </button>
+
+                    <form method="POST" action="{{ route('tickets.destroy', $ticket) }}">
+                        @csrf
+                        @method('DELETE')
+
+                        <button
+                            type="submit"
+                            class="w-full rounded-2xl bg-rose-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-rose-700 sm:w-auto"
+                        >
+                            Yes, Delete Ticket
+                        </button>
+                    </form>
+                </div>
             </div>
         </x-modal>
     @endif

@@ -23,6 +23,14 @@
         ],
     ];
 
+    if (Auth::user()->hasRole(\App\Enums\UserRole::Employee)) {
+        $navigationItems[] = [
+            'label' => 'AI Assistant',
+            'route' => route('assistant.index'),
+            'active' => request()->routeIs('assistant.*'),
+        ];
+    }
+
     if (Auth::user()->isAdmin()) {
         $navigationItems[] = [
             'label' => 'User Management',
@@ -34,6 +42,12 @@
             'label' => 'Categories',
             'route' => route('admin.categories.index'),
             'active' => request()->routeIs('admin.categories.*'),
+        ];
+
+        $navigationItems[] = [
+            'label' => 'Reports',
+            'route' => route('admin.reports.index'),
+            'active' => request()->routeIs('admin.reports.*'),
         ];
     }
 @endphp

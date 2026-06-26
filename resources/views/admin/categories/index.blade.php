@@ -35,15 +35,11 @@
     <div class="space-y-6">
 
         @if (session('status'))
-            <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-semibold text-emerald-800">
-                {{ session('status') }}
-            </div>
+            <x-auto-dismiss-alert :message="session('status')" />
         @endif
 
         @if ($errors->any())
-            <div class="rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm font-semibold text-rose-800">
-                {{ $errors->first() }}
-            </div>
+            <x-auto-dismiss-alert type="error" :message="$errors->first()" />
         @endif
 
         {{-- Create Category --}}

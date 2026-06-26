@@ -163,7 +163,6 @@ class DashboardController extends Controller
         );
         $statusChartSegments = $this->buildDonutSegments($statusBreakdown);
         $trendLabels = $trendDays->map(fn (CarbonImmutable $day): string => $day->format('d M'))->all();
-
         return view('dashboard', [
             'categoryCount' => Category::query()->count(),
             'openTickets' => (int) ($statusCounts[TicketStatus::Open->value] ?? 0),

@@ -2,12 +2,16 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\TicketStatus;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
+use App\Models\Ticket;
 use App\Models\User;
 use App\Support\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -23,6 +27,51 @@ class UserManagementController extends Controller
             'roles' => UserRole::cases(),
             'userCount' => User::query()->count(),
             'users' => User::query()->orderBy('name')->get(),
+        ]);
+    }
+
+    public function activity(User $user): View
+    {
+        abort_if($user->isAdmin(), 404);
+
+        $relatedTickets = $this->relatedTicketsQuery($user)
+            ->with(['category:id,name', 'creator:id,name', 'assignee:id,name'])
+            ->latest()
+            ->paginate(8, ['*'], 'tickets_page');
+
+        $relatedTicketIds = $this->relatedTicketsQuery($user)->select('tickets.id');
+        $activityLogs = AuditLog::query()
+            ->with(['actor:id,name', 'targetUser:id,name', 'ticket:id,ticket_number'])
+            ->where(function ($query) use ($user, $relatedTicketIds): void {
+                $query
+                    ->where('user_id', $user->id)
+                    ->orWhere('target_user_id', $user->id)
+                    ->orWhereIn('ticket_id', $relatedTicketIds);
+            })
+            ->latest()
+            ->paginate(12, ['*'], 'logs_page');
+        $activeStatuses = [
+            TicketStatus::Open->value,
+            TicketStatus::InProgress->value,
+            TicketStatus::Pending->value,
+        ];
+        $ticketSummary = $this->relatedTicketsCollection($user);
+
+        return view('admin.users.activity', [
+            'managedUser' => $user,
+            'linkedTickets' => $relatedTickets,
+            'activityLogs' => $activityLogs,
+            'ticketCount' => $ticketSummary->count(),
+            'activeTicketCount' => $ticketSummary->filter(fn (Ticket $ticket): bool => in_array($ticket->status->value, $activeStatuses, true))->count(),
+            'resolvedTicketCount' => $ticketSummary->filter(fn (Ticket $ticket): bool => in_array($ticket->status->value, [TicketStatus::Resolved->value, TicketStatus::Closed->value], true))->count(),
+            'activityCount' => AuditLog::query()
+                ->where(function ($query) use ($user, $relatedTicketIds): void {
+                    $query
+                        ->where('user_id', $user->id)
+                        ->orWhere('target_user_id', $user->id)
+                        ->orWhereIn('ticket_id', $relatedTicketIds);
+                })
+                ->count(),
         ]);
     }
 
@@ -155,5 +204,24 @@ class UserManagementController extends Controller
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique(User::class)->ignore($user->id)],
             'role' => ['required', 'string', Rule::in(UserRole::values())],
         ];
+    }
+
+    protected function relatedTicketsQuery(User $user)
+    {
+        return match ($user->role) {
+            UserRole::Employee => Ticket::query()->where('created_by', $user->id),
+            UserRole::SupportAgent => Ticket::query()->where('assigned_to', $user->id),
+            UserRole::Manager => Ticket::query()->where(function ($query) use ($user): void {
+                $query
+                    ->where('created_by', $user->id)
+                    ->orWhere('assigned_to', $user->id);
+            }),
+            UserRole::Admin => Ticket::query()->whereRaw('1 = 0'),
+        };
+    }
+
+    protected function relatedTicketsCollection(User $user): Collection
+    {
+        return $this->relatedTicketsQuery($user)->get();
     }
 }

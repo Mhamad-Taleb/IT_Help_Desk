@@ -85,6 +85,11 @@ class User extends Authenticatable
         return $this->hasMany(TicketMessage::class);
     }
 
+    public function ticketChatMessages(): HasMany
+    {
+        return $this->hasMany(TicketChatMessage::class);
+    }
+
     public function ticketAttachments(): HasMany
     {
         return $this->hasMany(TicketAttachment::class);
@@ -93,6 +98,11 @@ class User extends Authenticatable
     public function auditLogs(): HasMany
     {
         return $this->hasMany(AuditLog::class);
+    }
+
+    public function aiAssistantChats(): HasMany
+    {
+        return $this->hasMany(AiAssistantChat::class);
     }
 
     public function readAuditLogs(): BelongsToMany
